@@ -1,0 +1,38 @@
+[package]
+name = "ods2tsv"
+version = "0.1.0-alpha.1"
+edition = "2024"
+rust-version = "1.99"
+description = "Export saved OpenDocument spreadsheet values to TSV with ordered workbook manifests"
+license = "GPL-3.0-only"
+repository = "https://github.com/viell-dev/slop-ods2tsv"
+readme = "README.md"
+
+[dependencies]
+clap = { version = "4.6", features = ["derive"] }
+csv = "1.4"
+jiff = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+xml = "1.4"
+zip = { version = "9.4", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+criterion = "0.8"
+proptest = "1"
+tempfile = "3"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"
+
+[profile.release]
+strip = true
+lto = "thin"
+
+[[bench]]
+name = "extract"
+harness = false
