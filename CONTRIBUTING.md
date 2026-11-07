@@ -52,8 +52,8 @@ error and use platform CI evidence. Do not bypass security policy; report actual
 
 ## Benchmarks and real application checks
 
-`cargo bench --locked --bench extract` measures complete exports over dense flat/packaged, sparse, repeated,
-merged and empty-tail synthetic inputs. Inputs and fresh output parents are prepared outside timed
+`cargo bench --locked --bench extract` measures complete exports over dense flat/packaged, sparse,
+repeated, merged and empty-tail synthetic inputs. Inputs and fresh output parents are prepared outside timed
 work; conversion includes file/manifest output. Assert dimensions and record commit, compiler,
 target, host, fixture size and method. Retain reports and correctness controls. Compare timings on
 a controlled host; noisy shared-runner timings are not a hard speed gate.
