@@ -73,6 +73,8 @@ def corpus(binary, directory):
             assert not destination.exists()
         if stream == "stdout":
             assert "export completed" in result.stderr and "could not be written" in result.stderr
+        elif workbook == source:
+            assert Path(result.stdout.strip()) == destination, "Closed stderr must not suppress the completed path"
     return last_manifest
 
 

@@ -599,15 +599,14 @@ fn buffered_package_reads_still_reject_a_bad_content_checksum() {
     bytes[entry + 16] ^= 1;
     fs::write(&source, bytes).unwrap();
     let destination = dir.path().join("invalid-crc");
-    assert!(
-        export(
-            &source,
-            &Options {
-                output: Some(destination.clone()),
-                ..Options::default()
-            }
-        )
-        .is_err()
-    );
+    let error = export(
+        &source,
+        &Options {
+            output: Some(destination.clone()),
+            ..Options::default()
+        },
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("checksum"), "{error}");
     assert!(!destination.exists());
 }
