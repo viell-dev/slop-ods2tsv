@@ -52,12 +52,6 @@ jobs:
         shell: bash
         run: |
           python scripts/artifact.py dist/*.zip
-      - name: Inspect executable dependencies
-        shell: bash
-        run: |
-          suffix=""
-          if [ "$RUNNER_OS" = Windows ]; then suffix=".exe"; fi
-          python scripts/dependencies.py "target/${{ matrix.target }}/release/ods2tsv${suffix}"
       - if: runner.os == 'Linux'
         run: python scripts/minimal_linux.py target/x86_64-unknown-linux-musl/release/ods2tsv
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

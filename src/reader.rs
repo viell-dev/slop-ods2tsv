@@ -263,7 +263,8 @@ pub(crate) fn read(
                 } else if let Some(pending) = cell.as_mut().filter(|pending| !pending.covered) {
                     if is(&name, TEXT, "p") || is(&name, TEXT, "h") {
                         if pending.paragraph_depth == 0 {
-                            pending.bytes = add(pending.bytes, 1)?;
+                            pending.bytes =
+                                add(pending.bytes, usize::from(!pending.paragraphs.is_empty()))?;
                             if pending.bytes > MAX_CELL_BYTES {
                                 return Err(invalid("cell exceeds text limit"));
                             }
