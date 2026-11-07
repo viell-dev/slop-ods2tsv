@@ -429,3 +429,33 @@ fn cli_reports_exit_codes_and_fresh_default_directories() {
             .contains("opening")
     );
 }
+
+#[test]
+fn cell_byte_limit_counts_only_exported_paragraph_separators() {
+    let text = "x".repeat(ods2tsv::MAX_CELL_BYTES);
+    let (_dir, output) = convert(&table("Limit", &row(&cell(&text))), ValueMode::SavedText);
+    assert_eq!(records(&output, 0)[0][0], text);
+    let paragraphs = format!(
+        "<table:table-cell><text:p>{}</text:p><text:p>x</text:p></table:table-cell>",
+        "x".repeat(ods2tsv::MAX_CELL_BYTES - 2)
+    );
+    let (_dir, output) = convert(&table("Limit", &row(&paragraphs)), ValueMode::SavedText);
+    assert_eq!(records(&output, 0)[0][0].len(), ods2tsv::MAX_CELL_BYTES);
+    let error = failed(&xml(&table("Limit", &row(&cell(&(text + "x"))))));
+    assert!(error.contains("cell exceeds"), "{error}");
+}
+
+#[test]
+fn many_colliding_sheet_names_keep_unique_manifest_mappings() {
+    let body = table("Duplicate", &row(&cell("value"))).repeat(1002);
+    let (_dir, output) = convert(&body, ValueMode::SavedText);
+    let files: std::collections::HashSet<_> = output
+        .manifest
+        .sheets
+        .iter()
+        .map(|sheet| sheet.file.to_lowercase())
+        .collect();
+    assert_eq!(files.len(), 1002);
+    assert_eq!(output.manifest.sheets[1001].file, "Duplicate (1002).tsv");
+    assert_eq!(records(&output, 1001), vec![vec!["value"]]);
+}

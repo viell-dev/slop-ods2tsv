@@ -28,10 +28,11 @@ files, and Linux executable permissions; each has a SHA-256 file. Archives are n
 start a new local build with a fresh `dist/`.
 
 Run `python scripts/artifact.py <ZIP>` on the target OS. It verifies hashes, contents, extraction
-permissions and the installed executable's CLI/TSV/manifest corpus. Inspect Windows executable
-imports and include a clean Windows execution check: developer runners can hide runtime
-dependencies. Execute Linux on a glibc distribution and Alpine without requiring Rust/Python in
-the runtime environment. Source tests and cross-compiles do not replace artifact execution.
+permissions and the installed executable's CLI/TSV/manifest corpus. Windows inspection rejects
+non-system DLL imports and runs with only System32 on PATH. This runs on a hosted Windows runner,
+not a pristine Windows installation; installed system files remain an evidence limit. Execute Linux
+on a glibc distribution and Alpine without requiring Rust/Python in the runtime environment. Source
+tests and cross-compiles do not replace artifact execution.
 
 Run required interoperability checks and benchmarks with correctness assertions. Retain exact
 archives, receipts, benchmark inputs/method/results and evidence limits. Docs/help/schema/version

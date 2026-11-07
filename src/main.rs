@@ -5,6 +5,8 @@ use std::{path::PathBuf, process::ExitCode};
 /// Export saved ODS/FODS sheet values to TSV with ordered workbook manifests.
 #[derive(Parser)]
 #[command(
+    name = "ods2tsv",
+    bin_name = "ods2tsv",
     version,
     term_width = 100,
     after_help = "Exports every sheet, including hidden and empty sheets. Preserves original coordinates and fills merged cells. Formulas use saved results; they are never recalculated.\n\nOutput: one TSV per sheet, manifest.txt, and manifest.json (including original merged ranges). The destination must be new. Without --output, creates a fresh timestamped directory in the current working directory.\n\nLimits: 64 MiB content XML, 10,000,000 rectangular fields per sheet, 1 MiB per cell, 100,000 merged regions per sheet. Encrypted workbook content is unsupported."
