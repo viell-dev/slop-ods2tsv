@@ -5,10 +5,12 @@ inventory and JSON manifest preserving sheet order and original merged regions.
 
 ## Status
 
-This documents `0.1.0-alpha.1`, the experimental first alpha. See
+This checkout targets `0.1.0-alpha.2`, an experimental alpha. See
 [releases](https://github.com/viell-dev/slop-ods2tsv/releases) for publication status and downloads,
 the [changelog](CHANGELOG.md) for changes, and the
-[alpha tracker](https://github.com/viell-dev/slop-ods2tsv/issues/2) for current work. Behavior and
+[alpha tracker](https://github.com/viell-dev/slop-ods2tsv/issues/14) for current work. A source
+checkout can include unreleased corrections; use the README bundled with an installed ZIP for that
+version's contract. Behavior and
 the manifest can change before stable. There is no documentation site: this README, `--help`, and
 the [format guide](docs/FORMAT.md) cover the CLI.
 
@@ -58,7 +60,8 @@ Linux:
 Without `--output`, creates a fresh timestamped directory under the current working directory.
 An explicit destination must be new and its parent must exist. Existing exports are never reused.
 On success stdout contains the completed directory path; progress and warnings use stderr. Exit
-codes: 0 success, 1 extraction failure, 2 invalid arguments.
+codes: 0 success, 1 operational failure, 2 invalid arguments. If writing the final directory path
+to stdout fails, exit 1 leaves the completed export intact; stderr diagnostics are best-effort.
 
 Output contains a unique portable `.tsv` per sheet, `manifest.txt`, and `manifest.json`. All sheets
 are included in source order, including hidden and empty sheets. Use the manifest for order and
@@ -67,7 +70,8 @@ warnings, and all original merged ranges; see the [guide](docs/FORMAT.md) and
 [schema](manifest.schema.json).
 
 Saved cell paragraphs are the default; `--raw` prefers stored unlocalized values. Neither mode
-recalculates formulas or renders formats. Leading/interior grid positions and explicit ODF
+recalculates formulas or renders formats. Cached errors marked by LibreOffice retain their saved
+error text in either mode. Leading/interior grid positions and explicit ODF
 whitespace survive, merged values fill covered positions, and globally trailing emptiness is
 omitted. Every TSV record has the same width. Use a CSV reader configured for tabs, since quoted
 fields can contain tabs and newlines.
@@ -114,8 +118,11 @@ visibility styles are not resolved into metadata.
 The alpha limits decompressed content XML to 64 MiB, cell text to 1 MiB, each sheet's rectangular
 output to 10,000,000 fields, and each sheet to 100,000 merged regions. Overflow, invalid counts,
 overlapping merges and exceeded limits fail explicitly. Huge empty repeated tails stay compact.
-A distant populated cell can still require large output. Limits are fixed alpha safeguards, not a
-promise that every input near them fits every computer.
+A distant populated cell can still require large output. These caps do not bound total output bytes
+or XML nesting depth; large repeated values and deep XML remain [known
+limits](https://github.com/viell-dev/slop-ods2tsv/issues/9). They are fixed alpha guardrails, not a
+promise that every input near them fits every computer. Ignored image/annotation content uses the
+whole-input budget, rather than the smaller cell-text budget.
 
 Calculation, styles, charts, annotations, nested tables, tracked history, decryption, Excel formats
 and a GUI are outside scope. TSV and this manifest do not form a lossless workbook archive.

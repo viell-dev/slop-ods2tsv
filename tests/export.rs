@@ -459,3 +459,128 @@ fn many_colliding_sheet_names_keep_unique_manifest_mappings() {
     assert_eq!(output.manifest.sheets[1001].file, "Duplicate (1002).tsv");
     assert_eq!(records(&output, 1001), vec![vec!["value"]]);
 }
+
+#[test]
+fn explicit_whitespace_separates_ordinary_space_runs() {
+    let paragraphs = [
+        ("a<text:tab/> b", "a\t b"),
+        ("a<text:line-break/> b", "a\n b"),
+        ("a<text:s/> b", "a  b"),
+        (" <text:tab/>  b ", "\t b"),
+        ("a <text:s text:c='2'/>  b", "a    b"),
+        ("a<text:tab/> ", "a\t"),
+        (" a   <text:span> b </text:span> c ", "a b c"),
+    ];
+    let cells: String = paragraphs.iter().map(|(text, _)| cell(text)).collect();
+    for mode in [ValueMode::SavedText, ValueMode::Raw] {
+        let (_dir, output) = convert(&table("Spaces", &row(&cells)), mode);
+        assert_eq!(
+            records(&output, 0),
+            vec![
+                paragraphs
+                    .iter()
+                    .map(|(_, value)| *value)
+                    .collect::<Vec<_>>()
+            ]
+        );
+    }
+}
+
+#[test]
+fn ruby_annotations_and_note_bodies_do_not_enter_paragraph_values() {
+    let payload = "<text:ruby><text:ruby-base>base</text:ruby-base><text:ruby-text>annotation</text:ruby-text></text:ruby> a<text:note><text:note-citation>1</text:note-citation><text:note-body><text:p>footnote</text:p></text:note-body></text:note>b";
+    let (_dir, output) = convert(&table("Text", &row(&cell(payload))), ValueMode::SavedText);
+    assert_eq!(records(&output, 0), vec![vec!["base a1b"]]);
+}
+
+#[test]
+fn cached_errors_keep_text_and_coordinates_in_both_modes() {
+    let error = "<table:table-cell xmlns:e='urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0' e:value-type='error' office:value-type='string' office:string-value='' table:formula='of:=1/0'><text:p>#DIV/0!</text:p></table:table-cell>";
+    let missing = "<table:table-cell xmlns:e='urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0' e:value-type='error' office:value-type='string' office:string-value='' table:formula='of:=1/0'><text:p/></table:table-cell>";
+    let valid_empty = "<table:table-cell office:value-type='string' office:string-value='' table:formula='of:=&quot;&quot;'><text:p/></table:table-cell>";
+    for mode in [ValueMode::SavedText, ValueMode::Raw] {
+        let (_dir, output) = convert(
+            &table(
+                "Error",
+                &(row(&(cell("ok") + error)) + &row(&(valid_empty.to_owned() + missing))),
+            ),
+            mode,
+        );
+        assert_eq!(records(&output, 0), vec![vec!["ok", "#DIV/0!"]]);
+        assert_eq!(output.manifest.sheets[0].columns, 2);
+        assert_eq!(output.manifest.sheets[0].warnings.len(), 1);
+        assert_eq!(
+            output.manifest.sheets[0].warnings[0].code,
+            "missing-formula-result"
+        );
+        assert_eq!(output.manifest.sheets[0].warnings[0].count, 1);
+    }
+    // A string that resembles an error is still an ordinary valid stored empty result.
+    let ordinary = "<table:table-cell office:value-type='string' office:string-value=''><text:p>#DIV/0!</text:p></table:table-cell>";
+    let (_dir, output) = convert(
+        &table("Not an error", &row(&(cell("ok") + ordinary))),
+        ValueMode::Raw,
+    );
+    assert_eq!(records(&output, 0), vec![vec!["ok"]]);
+}
+
+#[test]
+fn large_ignored_content_does_not_consume_a_cell_budget() {
+    let ignored = "A".repeat(ods2tsv::MAX_CELL_BYTES + 4);
+    let extras = format!(
+        "<draw:frame><draw:image office:name='{ignored}'><office:binary-data>{ignored}</office:binary-data></draw:image></draw:frame><office:annotation><text:p>{ignored}</text:p></office:annotation><table:table><table:table-row>{}</table:table-row></table:table>",
+        cell(&ignored)
+    );
+    let content = xml(&table(
+        "Content",
+        &row(&format!(
+            "<table:table-cell><text:p>ok</text:p>{extras}</table:table-cell>"
+        )),
+    ));
+    for flat in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir
+            .path()
+            .join(if flat { "large.fods" } else { "large.ods" });
+        if flat {
+            fs::write(&source, &content).unwrap();
+        } else {
+            package(&source, &content, &[]);
+        }
+        let output = export(
+            &source,
+            &Options {
+                output: Some(dir.path().join("out")),
+                ..Options::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(records(&output, 0), vec![vec!["ok"]]);
+    }
+}
+
+#[test]
+fn oversized_cells_have_a_specific_error_and_clean_up() {
+    for excess in [1, 2, 1024] {
+        let value = "x".repeat(ods2tsv::MAX_CELL_BYTES + excess);
+        for payload in [
+            cell(&value),
+            format!("<table:table-cell office:value-type='string' office:string-value='{value}'/>"),
+        ] {
+            let error = failed(&xml(&table("Too much text", &row(&payload))));
+            assert!(error.contains("cell exceeds"), "{error}");
+        }
+    }
+}
+
+#[test]
+fn covered_content_is_discarded_in_favor_of_the_merge_anchor() {
+    for (anchor, expected) in [("", vec![]), ("anchor", vec![vec!["anchor", "anchor"]])] {
+        let cells = format!(
+            "<table:table-cell table:number-columns-spanned='2'><text:p>{anchor}</text:p></table:table-cell><table:covered-table-cell><text:p>alternate</text:p></table:covered-table-cell>"
+        );
+        let (_dir, output) = convert(&table("Merged", &row(&cells)), ValueMode::SavedText);
+        assert_eq!(records(&output, 0), expected);
+        assert_eq!(output.manifest.sheets[0].merged_ranges.len(), 1);
+    }
+}

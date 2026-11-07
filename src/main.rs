@@ -1,6 +1,10 @@
 use clap::Parser;
 use ods2tsv::{Options, ValueMode};
-use std::{path::PathBuf, process::ExitCode};
+use std::{
+    io::{self, Write},
+    path::PathBuf,
+    process::ExitCode,
+};
 
 /// Export saved ODS/FODS sheet values to TSV with ordered workbook manifests.
 #[derive(Parser)]
@@ -36,18 +40,36 @@ fn main() -> ExitCode {
         Ok(export) => {
             for sheet in &export.manifest.sheets {
                 for warning in &sheet.warnings {
-                    eprintln!(
+                    let _ = writeln!(
+                        io::stderr().lock(),
                         "warning: {:?}: {} ({})",
-                        sheet.name, warning.message, warning.count
+                        sheet.name,
+                        warning.message,
+                        warning.count
                     );
                 }
             }
-            eprintln!("Exported {} sheets.", export.manifest.sheets.len());
-            println!("{}", export.directory.display());
+            let _ = writeln!(
+                io::stderr().lock(),
+                "Exported {} sheets.",
+                export.manifest.sheets.len()
+            );
+            if let Err(error) = writeln!(io::stdout().lock(), "{}", export.directory.display()) {
+                let _ = writeln!(
+                    io::stderr().lock(),
+                    "error: export completed at {}, but its path could not be written to stdout: {error}",
+                    export.directory.display()
+                );
+                return ExitCode::FAILURE;
+            }
             ExitCode::SUCCESS
         }
         Err(error) => {
-            eprintln!("error: {}: {error}", args.file.display());
+            let _ = writeln!(
+                io::stderr().lock(),
+                "error: {}: {error}",
+                args.file.display()
+            );
             ExitCode::FAILURE
         }
     }

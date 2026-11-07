@@ -2,6 +2,7 @@
 import argparse
 import csv
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -51,6 +52,27 @@ def corpus(binary, directory):
     destination = directory / "broken-output"
     assert subprocess.run([str(binary), "-o", str(destination), str(broken)], capture_output=True, timeout=30).returncode == 1
     assert not destination.exists()
+    # The reader is closed before launch, making broken-pipe behavior deterministic on both OSes.
+    for label, stream, expected_code, workbook in (
+        ("closed-stdout", "stdout", 1, source),
+        ("closed-stderr", "stderr", 0, source),
+        ("closed-stderr-error", "stderr", 1, broken),
+    ):
+        read_fd, write_fd = os.pipe()
+        os.close(read_fd)
+        destination = directory / label
+        streams = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE, stream: write_fd}
+        try:
+            result = subprocess.run([str(binary), "-o", str(destination), str(workbook)], text=True, timeout=30, **streams)
+        finally:
+            os.close(write_fd)
+        assert result.returncode == expected_code, f"{label}: {result.returncode}, {result.stderr}"
+        if workbook == source:
+            assert (destination / "manifest.json").is_file() and not (destination / ".incomplete").exists()
+        else:
+            assert not destination.exists()
+        if stream == "stdout":
+            assert "export completed" in result.stderr and "could not be written" in result.stderr
     return last_manifest
 
 

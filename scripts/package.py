@@ -44,7 +44,7 @@ def main():
             info.external_attr = (0o100755 if path == binary else 0o100644) << 16
             package.writestr(info, path.read_bytes())
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
-    archive.with_suffix(".zip.sha256").write_text(f"{digest}  {archive.name}\n", encoding="utf-8")
+    archive.with_suffix(".zip.sha256").write_text(f"{digest}  {archive.name}\n", encoding="utf-8", newline="\n")
     print(archive)
 
 

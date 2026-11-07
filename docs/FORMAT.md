@@ -1,6 +1,7 @@
 # Export format
 
-This describes alpha `0.1.0-alpha.1` and manifest schema 1. CLI help is reproduced in the
+This describes the `0.1.0-alpha.2` source and manifest schema 1; GitHub releases determine which
+builds are published. CLI help is reproduced in the
 [README](../README.md#command-reference).
 
 ## TSV values and coordinates
@@ -17,10 +18,16 @@ Raw mode reverses that preference. Numeric attributes stay strings without float
 conversion. Dates, times, durations and booleans are not reformatted or localized. Formulas use
 saved results whose freshness cannot be inferred. A formula lacking both saved representations
 exports empty and produces `missing-formula-result`; an explicitly saved empty result is valid.
+LibreOffice's namespace-qualified cached-error marker is an exception to raw attribute preference:
+use saved error paragraphs, since its string attribute is normally empty for errors. An error
+formula with no non-empty saved error text gets the missing-result warning. Ordinary empty string
+results do not become errors merely because their saved paragraphs resemble an error message.
 
 Ordinary XML text whitespace follows ODF collapse rules; explicit `text:s`, `text:tab` and
 `text:line-break` survive. Paragraphs join with LF. Annotations, drawings, nested tables and tracked
-history do not contribute cell text. All sheets remain in source document order, regardless of
+history, ruby annotations and footnote bodies do not contribute cell text. Ruby base text and note
+citations remain. An ordinary space after an explicit whitespace element starts a new collapsible
+run. All sheets remain in source document order, regardless of
 visibility; hidden rows and columns also retain their data positions.
 
 ## Manifest schema 1
@@ -60,6 +67,9 @@ appear. Each logical region appears once, ordered by start row/column. Repeated 
 expand into separate regions; exceeding 100,000 regions fails rather than truncating metadata.
 Overlapping regions fail because their fill is ambiguous. Cell types, formulas, styles and
 visibility are not otherwise archived, and the manifest cannot reconstruct the original workbook.
+Merge fill uses only the anchor value. Stored alternate content in covered cells is discarded;
+an empty anchor stays empty even if a covered cell contains content. Merge metadata retains geometry,
+not those alternate values.
 
 Ignore unknown additive fields. Incompatible meanings or removals require a new schema version.
 Source paths exclude machine-specific absolute directories. TSV and filename output is
@@ -72,3 +82,5 @@ XML, flushes output, writes both manifests, then removes the marker last. Succes
 then. Ordinary failure removes owned files, never unrelated contents. Failed cleanup or interruption
 can leave a marked partial directory. There is no resume/overwrite mode, and flushes do not promise
 survival of power loss.
+Failure to report the completed directory on stdout returns exit 1 and leaves the complete files
+intact. This reporting failure does not roll back an otherwise successful export.
