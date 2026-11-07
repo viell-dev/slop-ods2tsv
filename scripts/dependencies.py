@@ -26,7 +26,7 @@ def main():
         unexpected = {name for name in imports if name not in os_dlls and not name.startswith(("api-ms-win-core-", "ext-ms-win-"))}
         assert not unexpected, f"Unreviewed runtime dependencies: {sorted(unexpected)}"
         env = os.environ.copy()
-        env["PATH"] = str(Path(env["SystemRoot"]) / "System32")
+        env["PATH"] = str(Path(os.environ["SystemRoot"]) / "System32")
         for name in ("PYTHONHOME", "PYTHONPATH", "RUSTUP_HOME", "CARGO_HOME", "DOTNET_ROOT"):
             env.pop(name, None)
         subprocess.run([str(binary), "--version"], env=env, check=True)
