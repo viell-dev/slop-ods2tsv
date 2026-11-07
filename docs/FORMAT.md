@@ -1,6 +1,6 @@
 # Export format
 
-This describes the `0.1.0-alpha.2` source and manifest schema 1; GitHub releases determine which
+This describes the `0.1.0-alpha.3` source and manifest schema 1; GitHub releases determine which
 builds are published. CLI help is reproduced in the [README](../README.md#command-reference).
 
 ## TSV values and coordinates
@@ -18,26 +18,33 @@ conversion. Dates, times, durations and booleans are not reformatted or localize
 saved results whose freshness cannot be inferred. A formula lacking both saved representations
 exports empty and produces `missing-formula-result`; an explicitly saved empty result is valid.
 LibreOffice's namespace-qualified cached-error marker is an exception to raw attribute preference:
-use saved error paragraphs, since its string attribute is normally empty for errors. An error
-formula gets the missing-result warning when paragraphs are absent or their joined string is empty;
-this does not validate error codes or whitespace-only representations. Error-cell attributes are
-not fallback values; unusual representations are tracked in [issue
-17](https://github.com/viell-dev/slop-ods2tsv/issues/17). Ordinary empty string results do not become
-errors merely because their saved paragraphs resemble an error message.
+use saved error paragraphs containing a non-whitespace character, since the string attribute is
+normally empty for errors. Otherwise fall back to a typed attribute containing a non-whitespace
+character. If neither exists, export empty and warn for formulas, including when empty paragraphs
+only contribute separators. The selected representation keeps its spaces; error codes are not
+validated or translated. Ordinary empty string results remain valid and do not become errors
+merely because their saved paragraphs resemble an error message.
 
-Ordinary XML text whitespace follows ODF collapse rules; explicit `text:s`, `text:tab` and
-`text:line-break` survive. Paragraphs join with LF. Annotations, drawings, nested tables and tracked
+By default, ordinary XML text whitespace follows ODF collapse rules; explicit `text:s`, `text:tab`
+and `text:line-break` survive. Paragraphs join with LF. Annotations, drawings, nested tables and tracked
 history, ruby annotations and footnote bodies do not contribute cell text. Ruby base text and note
 citations remain. An ordinary space after an explicit whitespace element starts a new collapsible
 run. All sheets remain in source document order, regardless of visibility; hidden rows and columns
 also retain their data positions.
 
-**Calc compatibility limit:** LibreOffice 25.2.3.2 can save literal spaces in rich-text/multi-line
-cell paragraphs that Calc itself preserves when reopening the ODS. Strict ODF collapsing here can
-remove paragraph-edge spaces or collapse interior runs, so extracted text can lose spaces visible
-in Calc. Raw mode can have the same limit when no separate stored string is present. [Issue
-16](https://github.com/viell-dev/slop-ods2tsv/issues/16) retains the evidence and future compatibility
-decision; this alpha keeps the strict ODF policy rather than promise Calc's text interpretation.
+`--preserve-whitespace` keeps literal character data inside these cell paragraphs after normal XML
+decoding, including leading/trailing spaces, runs, tabs and line breaks. Explicit whitespace and
+paragraph separators still apply. It does not preserve indentation outside paragraphs or text in
+ignored subtrees. XML's own line-ending and attribute normalization still applies. Saved/raw value
+preference is unchanged, so raw attributes can take priority over the paragraphs in raw mode.
+
+LibreOffice 25.2.3.2 saves some rich-text/multi-line spaces literally, which Calc preserves on
+reopening. The option retains those spaces in the real-application tests; the default can still
+collapse them. Use the option for that compatibility requirement. It is explicit because literal
+preservation can also retain indentation inside pretty-printed XML paragraphs, and producer
+identity alone does not establish text semantics. This is not a promise of full Calc rendering or
+every producer/version. [Issue 16](https://github.com/viell-dev/slop-ods2tsv/issues/16) records the
+evidence and alternatives.
 
 ## Manifest schema 1
 
@@ -51,7 +58,7 @@ sheet; JSON retains the complete list within the documented limit.
 | `exporter` | Tool name and version from Cargo metadata |
 | `source` | Basename, detected container (`ods`/`fods`), original file size in bytes |
 | `exported_at` | UTC export time; intentionally varies between runs |
-| `options` | Value mode, grid origin, rectangularity, merge fill and trimming rules |
+| `options` | Value mode, paragraph whitespace, grid origin, rectangularity, merge fill and trimming rules |
 | `tsv` | Encoding, BOM flag, delimiter, quoting and record terminator |
 | `sheets` | Every original sheet, in workbook order |
 
@@ -81,6 +88,8 @@ an empty anchor stays empty even if a covered cell contains content. Merge metad
 geometry, not those alternate values.
 
 Ignore unknown additive fields. Incompatible meanings or removals require a new schema version.
+`options.preserve_whitespace` is an additive boolean from alpha.3; absent means `false`, the ODF
+collapse used by earlier exports. The text manifest names the same paragraph whitespace policy.
 Source paths exclude machine-specific absolute directories. TSV and filename output is
 deterministic for identical input/options/environment; timestamps and automatic directories vary.
 
@@ -93,3 +102,8 @@ can leave a marked partial directory. There is no resume/overwrite mode, and flu
 survival of power loss.
 Failure to report the completed directory on stdout returns exit 1 and leaves the complete files
 intact. This reporting failure does not roll back an otherwise successful export.
+
+Read, decompression, checksum and content-byte-limit failures report a workbook read error. XML
+syntax errors retain the parser's line/column. Input is parsed once; these diagnostics do not add
+a separate pre-validation pass. Resource limits and cleanup also apply to ignored XML and output
+expansion; see [the README](../README.md#scope-and-limits) for the fixed alpha caps.

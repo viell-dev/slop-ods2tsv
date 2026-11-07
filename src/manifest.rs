@@ -73,6 +73,9 @@ pub struct Source {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
     pub value_mode: String,
+    /// Absent in manifests written before alpha.3; those used ODF collapsing.
+    #[serde(default)]
+    pub preserve_whitespace: bool,
     pub grid_origin: String,
     pub rectangular: bool,
     pub merged_cells: String,
@@ -91,7 +94,7 @@ pub struct Dialect {
 impl Manifest {
     pub(crate) fn text(&self) -> String {
         let mut text = format!(
-            "Workbook: {}\nExporter: {} {}\nExported at: {}\nValues: {}\n\
+            "Workbook: {}\nExporter: {} {}\nExported at: {}\nValues: {}\nParagraph whitespace: {}\n\
              Formulas are not recalculated.\n\
              Grid: original A1 origin; rectangular; merged values filled; trailing emptiness omitted\n\
              TSV: UTF-8, tabs, double-quote escaping, CRLF records\n\nSheets in original workbook order:\n",
@@ -100,6 +103,11 @@ impl Manifest {
             self.exporter.version,
             self.exported_at,
             self.options.value_mode,
+            if self.options.preserve_whitespace {
+                "preserved"
+            } else {
+                "ODF collapse"
+            },
         );
         for sheet in &self.sheets {
             text.push_str(&format!(

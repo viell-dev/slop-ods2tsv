@@ -5,10 +5,10 @@ inventory and JSON manifest preserving sheet order and original merged regions.
 
 ## Status
 
-This checkout targets `0.1.0-alpha.2`, an experimental alpha. See
+This checkout targets `0.1.0-alpha.3`, an experimental alpha. See
 [releases](https://github.com/viell-dev/slop-ods2tsv/releases) for publication status and downloads,
 the [changelog](CHANGELOG.md) for changes, and the [alpha
-tracker](https://github.com/viell-dev/slop-ods2tsv/issues/14) for current work. A source checkout
+tracker](https://github.com/viell-dev/slop-ods2tsv/issues/19) for current work. A source checkout
 can include unreleased corrections; use the README bundled with an installed ZIP for that version's
 contract. Behavior and the manifest can change before stable. There is no documentation site: this
 README, `--help`, and the [format guide](docs/FORMAT.md) cover the CLI.
@@ -54,7 +54,12 @@ Linux:
 ```sh
 ./ods2tsv workbook.ods
 ./ods2tsv --raw --output exported workbook.fods
+./ods2tsv --preserve-whitespace --output calc-export workbook.ods
 ```
+
+The ZIP includes [examples/workbook.fods](examples/workbook.fods) for sheet order/merges and
+[examples/text-options.fods](examples/text-options.fods) for literal spaces, saved/raw numbers and
+a cached formula error. Try them with the same commands in a writable directory.
 
 Without `--output`, creates a fresh timestamped directory under the current working directory.
 An explicit destination must be new and its parent must exist. Existing exports are never reused.
@@ -75,9 +80,11 @@ whitespace survive, merged values fill covered positions, and globally trailing 
 omitted. Every TSV record has the same width. Use a CSV reader configured for tabs, since quoted
 fields can contain tabs and newlines.
 
-Known Calc limit: strict ODF whitespace rules can collapse spaces that Calc preserves in rich-text
-or multi-line cells, including in raw mode when no separate stored string exists. See the
-[compatibility issue](https://github.com/viell-dev/slop-ods2tsv/issues/16).
+For Calc rich-text or multi-line cells, use `--preserve-whitespace` to keep literal paragraph spaces
+that the default ODF rules collapse. It works with either value mode and is recorded in both
+manifests. The default remains useful for XML whose paragraph whitespace includes formatting
+indentation. This option preserves saved text; it does not render styles or calculate values.
+See the [whitespace contract](docs/FORMAT.md#tsv-values-and-coordinates).
 
 On failure the tool cleans its own outputs. Interruption or failed cleanup can leave `.incomplete`;
 discard that partial export and rerun into a new directory. Consume output only when both manifests
@@ -98,16 +105,17 @@ Arguments:
   <FILE>  Input OpenDocument spreadsheet (ZIP package or flat XML, detected by content)
 
 Options:
-  -r, --raw           Prefer stored values (unlocalized numbers, ISO dates) over saved paragraph text
-  -o, --output <DIR>  Create this new output directory instead of a timestamped directory
-  -h, --help          Print help
-  -V, --version       Print version
+  -r, --raw                  Prefer stored values (unlocalized numbers, ISO dates) over saved paragraph text
+      --preserve-whitespace  Keep literal paragraph whitespace (useful for Calc rich-text and multi-line cells)
+  -o, --output <DIR>         Create this new output directory instead of a timestamped directory
+  -h, --help                 Print help
+  -V, --version              Print version
 
 Exports every sheet, including hidden and empty sheets. Preserves original coordinates and fills merged cells. Formulas use saved results; they are never recalculated.
 
 Output: one TSV per sheet, manifest.txt, and manifest.json (including original merged ranges). The destination must be new. Without --output, creates a fresh timestamped directory in the current working directory.
 
-Limits: 64 MiB content XML, 10,000,000 rectangular fields per sheet, 1 MiB per cell, 100,000 merged regions per sheet. Encrypted workbook content is unsupported.
+Limits: 64 MiB content XML, 256 open XML elements, 256 MiB total TSV/manifest bytes, 10,000,000 rectangular fields per sheet, 1 MiB per cell, 100,000 merged regions per sheet. Encrypted workbook content is unsupported.
 ```
 <!-- help:end -->
 
@@ -118,14 +126,15 @@ are accepted. UTF-8, UTF-16 LE/BE, and ISO-8859-1 XML are tested. At least one s
 empty sheets have zero-byte TSVs and zero dimensions. Hidden rows and columns remain data positions;
 visibility styles are not resolved into metadata.
 
-The alpha limits decompressed content XML to 64 MiB, cell text to 1 MiB, each sheet's rectangular
-output to 10,000,000 fields, and each sheet to 100,000 merged regions. Overflow, invalid counts,
-overlapping merges and exceeded limits fail explicitly. Huge empty repeated tails stay compact.
-A distant populated cell can still require large output. These caps do not bound total output bytes
-or XML nesting depth; large repeated values and deep XML remain [known
-limits](https://github.com/viell-dev/slop-ods2tsv/issues/9). They are fixed alpha guardrails, not a
-promise that every input near them fits every computer. Ignored image/annotation content uses the
-whole-input budget, rather than the smaller cell-text budget.
+The alpha limits decompressed content XML to 64 MiB, XML to 256 open elements, cell text to 1 MiB,
+each sheet's rectangular output to 10,000,000 fields, and each sheet to 100,000 merged regions.
+All TSVs and both manifests together may contain at most 256 MiB of encoded bytes per export;
+quoting, separators and record endings count. The temporary incomplete marker is outside that
+count. Overflow, invalid counts, overlapping merges and exceeded limits fail explicitly and clean
+up owned output. Huge empty repeated tails stay compact. A distant populated cell can still require
+large output. These fixed alpha guardrails do not guarantee a CPU/RAM ceiling or that every input
+near them fits every computer. Ignored image/annotation content uses the whole-input budget, rather
+than the smaller cell-text budget. Package-manifest inspection also enforces the nesting cap.
 
 Calculation, styles, charts, annotations, nested tables, tracked history, decryption, Excel formats
 and a GUI are outside scope. TSV and this manifest do not form a lossless workbook archive.

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.0-alpha.3
+
+Add `--preserve-whitespace` for literal cell-paragraph text, including Calc rich-text/multi-line
+spaces, in either saved/raw mode. The default keeps ODF collapsing. Both manifests record the
+choice with an additive schema-1 field; real Calc save/re-read checks cover both policies.
+
+Retain meaningful cached-error paragraphs or a non-whitespace attribute fallback; warn for error
+formulas whose only saved text is whitespace. Keep read/checksum/budget failures distinct from
+positioned XML syntax errors without a second validation pass.
+
+Cap XML at 256 open elements and combined TSV/manifest output at 256 MiB per export, including
+encoded quoting and separators. Prune empty source templates and cache non-empty repeated-row
+cells. Add actual-limit cleanup tests and a repeated-empty benchmark. These caps remain guardrails,
+not fixed CPU/RAM guarantees. Windows/Linux portable ZIPs remain the installation path.
+[Review and release evidence](https://github.com/viell-dev/slop-ods2tsv/issues/19).
+
 ## 0.1.0-alpha.2
 
 Preserve spaces after explicit ODF whitespace, retain cached error text in raw exports, exclude ruby

@@ -1,5 +1,5 @@
 use crate::{
-    Error, MAX_CELL_BYTES, invalid,
+    Error, MAX_CELL_BYTES, MAX_XML_DEPTH, Options, invalid,
     sheet::{Cell, Row, Sheet, add},
 };
 use serde::{Deserialize, Serialize};
@@ -78,7 +78,7 @@ impl Pending {
         };
         let cached_error = attr(attributes, CALCEXT, "value-type") == Some("error");
         // LibreOffice stores error cells with an empty string attribute and the error in paragraphs.
-        let raw = if covered || cached_error {
+        let raw = if covered {
             None
         } else {
             attr(attributes, OFFICE, raw_attribute)
@@ -118,9 +118,12 @@ impl Pending {
         Ok(())
     }
 
-    fn characters(&mut self, text: &str) -> Result<(), Error> {
+    fn characters(&mut self, text: &str, preserve_whitespace: bool) -> Result<(), Error> {
         if self.covered || self.paragraph_depth == 0 {
             return Ok(());
+        }
+        if preserve_whitespace {
+            return self.push(text);
         }
         for ch in text.chars() {
             if matches!(ch, ' ' | '\t' | '\r' | '\n') {
@@ -158,9 +161,14 @@ impl Pending {
 
     fn finish(mut self, mode: ValueMode) -> Result<Cell, Error> {
         if !self.covered {
-            let display = (!self.paragraphs.is_empty())
-                .then(|| self.paragraphs.join("\n"))
-                .filter(|text| !self.cached_error || !text.is_empty());
+            let mut display = (!self.paragraphs.is_empty()).then(|| self.paragraphs.join("\n"));
+            if self.cached_error {
+                // Error paragraphs are authoritative in either mode. Whitespace alone is not
+                // an error result; retain an unusual producer's non-empty attribute as fallback.
+                display = display.filter(|text| !text.trim().is_empty());
+                self.raw = self.raw.filter(|text| !text.trim().is_empty());
+                display = display.or(self.raw.take());
+            }
             self.cell.missing_formula = self.formula && self.raw.is_none() && display.is_none();
             self.cell.value = match mode {
                 ValueMode::SavedText => display.or(self.raw),
@@ -178,7 +186,7 @@ impl Pending {
 /// The dependency owns XML validity, decoding, namespaces and references. This loop owns ODF projection.
 pub(crate) fn read(
     source: impl Read,
-    mode: ValueMode,
+    options: &Options,
     mut emit: impl FnMut(Sheet) -> Result<(), Error>,
 ) -> Result<(), Error> {
     let parser = ParserConfig::new()
@@ -205,6 +213,11 @@ pub(crate) fn read(
             XmlEvent::StartElement {
                 name, attributes, ..
             } => {
+                if stack.len() >= MAX_XML_DEPTH {
+                    return Err(invalid(format!(
+                        "workbook XML exceeds {MAX_XML_DEPTH} open elements"
+                    )));
+                }
                 if stack.is_empty() {
                     if !(is(&name, OFFICE, "document") || is(&name, OFFICE, "document-content")) {
                         return Err(invalid("input is not an OpenDocument spreadsheet"));
@@ -312,12 +325,21 @@ pub(crate) fn read(
                 } else if is(&name, TABLE, "table-row") {
                     if let (Some(sheet), Some(row)) = (sheet.as_mut(), row.take()) {
                         row_index = add(row.start, row.repeat)?;
-                        sheet.rows.push(row);
+                        if !row.cells.is_empty() {
+                            sheet.rows.push(row);
+                        }
                     }
                 } else if is(&name, TABLE, "table-cell") || is(&name, TABLE, "covered-table-cell") {
                     if let (Some(row), Some(pending)) = (row.as_mut(), cell.take()) {
                         column = add(column, pending.cell.repeat)?;
-                        row.cells.push(pending.finish(mode)?);
+                        let cell = pending.finish(options.values)?;
+                        if !cell.value.is_empty()
+                            || cell.missing_formula
+                            || cell.row_span > 1
+                            || cell.column_span > 1
+                        {
+                            row.cells.push(cell);
+                        }
                     }
                 } else if (is(&name, TEXT, "p") || is(&name, TEXT, "h")) && cell.is_some() {
                     let pending = cell.as_mut().unwrap();
@@ -332,7 +354,7 @@ pub(crate) fn read(
                 if skip == 0 =>
             {
                 if let Some(pending) = cell.as_mut() {
-                    pending.characters(&text)?;
+                    pending.characters(&text, options.preserve_whitespace)?;
                 }
             }
             XmlEvent::Doctype { .. } => {

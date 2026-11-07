@@ -15,6 +15,7 @@ fn benchmarks(c: &mut Criterion) {
         ("dense-24000-fields", dense.clone(), 2000, 12),
         ("dense-24000-fields-ods", dense, 2000, 12),
         ("repeated-1000000-fields", "<table:table-row table:number-rows-repeated='100000'><table:table-cell table:number-columns-repeated='10'><text:p>V</text:p></table:table-cell></table:table-row>".to_owned(), 100000, 10),
+        ("repeated-10000-rows-empty-10000-cells", format!("<table:table-row table:number-rows-repeated='10000'>{value}{}</table:table-row>", "<table:table-cell/>".repeat(10000)), 10000, 1),
         ("empty-million-row-tail", format!("<table:table-row>{value}</table:table-row><table:table-row table:number-rows-repeated='1048575'><table:table-cell table:number-columns-repeated='16384'/></table:table-row>"), 1, 1),
         ("sparse-100000-fields", format!("<table:table-row table:number-rows-repeated='199'/><table:table-row><table:table-cell table:number-columns-repeated='499'/>{value}</table:table-row>"), 200, 500),
         ("merged-10000-regions", "<table:table-row table:number-rows-repeated='10000'><table:table-cell table:number-columns-spanned='2'><text:p>M</text:p></table:table-cell><table:covered-table-cell/></table:table-row>".into(), 10000, 2),
@@ -57,6 +58,20 @@ fn benchmarks(c: &mut Criterion) {
             );
         } else {
             fs::write(&source, content).unwrap();
+        }
+        if name == "repeated-10000-rows-empty-10000-cells" {
+            let checked = export(
+                &source,
+                &Options {
+                    output: Some(input.path().join("checked")),
+                    ..Options::default()
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                fs::read(checked.directory.join("Bench.tsv")).unwrap(),
+                "Value\r\n".repeat(10000).as_bytes()
+            );
         }
         eprintln!(
             "Fixture {name}: {} input bytes, {rows} rows, {columns} columns",

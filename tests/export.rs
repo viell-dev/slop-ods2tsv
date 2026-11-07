@@ -50,6 +50,7 @@ fn convert(tables: &str, mode: ValueMode) -> (TempDir, ods2tsv::Export) {
         &Options {
             output: Some(dir.path().join("output")),
             values: mode,
+            ..Options::default()
         },
     )
     .unwrap();
@@ -608,5 +609,163 @@ fn buffered_package_reads_still_reject_a_bad_content_checksum() {
     )
     .unwrap_err();
     assert!(error.to_string().contains("checksum"), "{error}");
+    assert!(matches!(error, ods2tsv::Error::Read { .. }));
+    assert!(
+        error
+            .to_string()
+            .starts_with("cannot read workbook content:")
+    );
+    assert!(!error.to_string().contains("1:1"));
     assert!(!destination.exists());
+}
+
+#[test]
+fn error_cells_use_meaningful_paragraphs_then_attributes_in_both_modes() {
+    let cases = [
+        (" office:string-value='#VALUE!'", "", "#VALUE!"),
+        (
+            " office:string-value='#VALUE!'",
+            "<text:p>#DIV/0!</text:p>",
+            "#DIV/0!",
+        ),
+        (
+            " office:string-value='#VALUE!'",
+            "<text:p/><text:p/>",
+            "#VALUE!",
+        ),
+        (" office:string-value='  '", "<text:p/><text:p/>", ""),
+        ("", "<text:p><text:s text:c='2'/><text:tab/></text:p>", ""),
+    ];
+    for mode in [ValueMode::SavedText, ValueMode::Raw] {
+        for (attribute, paragraphs, expected) in cases {
+            let error_cell = format!(
+                "<table:table-cell xmlns:e='urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0' table:formula='of:=1/0' office:value-type='string' e:value-type='error'{attribute}>{paragraphs}</table:table-cell>"
+            );
+            let (_dir, output) =
+                convert(&table("Errors", &row(&(error_cell + &cell("tail")))), mode);
+            assert_eq!(records(&output, 0), vec![vec![expected, "tail"]]);
+            let warnings = &output.manifest.sheets[0].warnings;
+            assert_eq!(warnings.len(), usize::from(expected.is_empty()));
+            if expected.is_empty() {
+                assert_eq!(warnings[0].count, 1);
+            }
+        }
+    }
+}
+
+#[test]
+fn literal_whitespace_is_opt_in_independent_of_value_mode_and_recorded() {
+    let paragraphs = "<text:p>  x<text:span>  y</text:span> \t </text:p><text:p>  z<text:s/> b<text:line-break/> c </text:p>";
+    let value = format!("<table:table-cell>{paragraphs}</table:table-cell>");
+    let source_xml = xml(&table("Whitespace", &row(&value)));
+    for mode in [ValueMode::SavedText, ValueMode::Raw] {
+        for preserve in [false, true] {
+            let directory = tempfile::tempdir().unwrap();
+            let source = directory.path().join("source.fods");
+            fs::write(&source, &source_xml).unwrap();
+            let output = export(
+                &source,
+                &Options {
+                    output: Some(directory.path().join("out")),
+                    values: mode,
+                    preserve_whitespace: preserve,
+                },
+            )
+            .unwrap();
+            let expected = if preserve {
+                "  x  y \t \n  z  b\n c "
+            } else {
+                "x y\nz  b\n c"
+            };
+            assert_eq!(records(&output, 0), vec![vec![expected]]);
+            assert_eq!(output.manifest.options.preserve_whitespace, preserve);
+            let mut legacy = serde_json::to_value(&output.manifest).unwrap();
+            legacy["options"]
+                .as_object_mut()
+                .unwrap()
+                .remove("preserve_whitespace");
+            assert!(
+                !serde_json::from_value::<Manifest>(legacy)
+                    .unwrap()
+                    .options
+                    .preserve_whitespace
+            );
+            assert!(
+                fs::read_to_string(output.directory.join("manifest.txt"))
+                    .unwrap()
+                    .contains(if preserve {
+                        "Paragraph whitespace: preserved"
+                    } else {
+                        "Paragraph whitespace: ODF collapse"
+                    })
+            );
+        }
+    }
+}
+
+#[test]
+fn xml_depth_is_bounded_including_ignored_subtrees_and_metadata() {
+    for ignored in [false, true] {
+        for excess in [0, 1] {
+            let wrapper = if ignored { "draw:frame" } else { "z" };
+            // document, body, spreadsheet, table, wrapper: five open elements.
+            let depth = ods2tsv::MAX_XML_DEPTH - 5 + excess;
+            let nested = format!(
+                "<{wrapper}>{}{}</{wrapper}>",
+                "<z>".repeat(depth),
+                "</z>".repeat(depth)
+            );
+            let source_xml = xml(&table("Depth", &nested));
+            if excess > 0 {
+                assert!(failed(&source_xml).contains("256 open elements"));
+            } else {
+                let (_directory, result) = convert(&table("Depth", &nested), ValueMode::SavedText);
+                assert_eq!(result.manifest.sheets[0].rows, 0);
+            }
+        }
+    }
+    let directory = tempfile::tempdir().unwrap();
+    let source = directory.path().join("deep.ods");
+    let metadata =
+        "<m>".repeat(ods2tsv::MAX_XML_DEPTH + 1) + &"</m>".repeat(ods2tsv::MAX_XML_DEPTH + 1);
+    package(
+        &source,
+        &xml(&table("Empty", "")),
+        &[("META-INF/manifest.xml", &metadata)],
+    );
+    let destination = directory.path().join("out");
+    let error = export(
+        &source,
+        &Options {
+            output: Some(destination.clone()),
+            ..Options::default()
+        },
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("package manifest XML exceeds"));
+    assert!(!destination.exists());
+}
+
+#[test]
+fn malformed_xml_keeps_its_syntax_position() {
+    let error = failed(&xml(&table("Syntax", "<z></wrong>")));
+    assert!(error.starts_with("invalid workbook XML: 1:"), "{error}");
+}
+
+#[test]
+fn tiny_repeated_input_stops_at_the_real_output_byte_budget_and_cleans_up() {
+    // Less than 1 KiB of input would otherwise produce 257 MiB of data, well within the
+    // field/cell/input caps. The writer must enforce the actual production byte budget.
+    let repeated = format!(
+        "<table:table-row table:number-rows-repeated='257'><table:table-cell><text:p><text:s text:c='{}'/></text:p></table:table-cell></table:table-row>",
+        ods2tsv::MAX_CELL_BYTES
+    );
+    let error = failed(&xml(&table("Expansion", &repeated)));
+    assert!(
+        error.contains(&format!(
+            "{} total TSV/manifest bytes",
+            ods2tsv::MAX_OUTPUT_BYTES
+        )),
+        "{error}"
+    );
 }
