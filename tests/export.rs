@@ -753,6 +753,43 @@ fn malformed_xml_keeps_its_syntax_position() {
 }
 
 #[test]
+fn decoder_errors_omit_unknown_positions_but_parser_eof_keeps_its_position() {
+    let prefix = format!(
+        "{HEADER}\n<table:table table:name='Encoding'>\n<table:table-row><table:table-cell><text:p>\n"
+    );
+    for suffix in [&b"bad\xff"[..], &b"\xc3"[..], "é</text:p>".as_bytes()] {
+        let parent = tempfile::tempdir().unwrap();
+        let source = parent.path().join("bad.fods");
+        let destination = parent.path().join("out");
+        fs::write(&source, [prefix.as_bytes(), suffix].concat()).unwrap();
+        let error = export(
+            &source,
+            &Options {
+                output: Some(destination.clone()),
+                ..Options::default()
+            },
+        )
+        .unwrap_err();
+        if suffix.starts_with("é".as_bytes()) {
+            assert!(matches!(error, ods2tsv::Error::Xml(_)), "{error}");
+            assert!(
+                error.to_string().starts_with("invalid workbook XML: 4:"),
+                "{error}"
+            );
+        } else {
+            assert!(matches!(error, ods2tsv::Error::Decode { .. }), "{error}");
+            assert!(
+                error.to_string().starts_with("cannot decode workbook XML:"),
+                "{error}"
+            );
+            assert!(!error.to_string().contains("1:1"));
+            assert!(std::error::Error::source(&error).is_some());
+        }
+        assert!(!destination.exists(), "{error}");
+    }
+}
+
+#[test]
 fn tiny_repeated_input_stops_at_the_real_output_byte_budget_and_cleans_up() {
     // Less than 1 KiB of input would otherwise produce 257 MiB of data, well within the
     // field/cell/input caps. The writer must enforce the actual production byte budget.

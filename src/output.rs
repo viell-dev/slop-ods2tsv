@@ -10,6 +10,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
+// Every range has these four positive coordinates. Compact one-digit JSON is a lower bound
+// independent of pretty-print indentation; actual bytes are still charged by LimitedWriter.
+const MIN_MERGE_JSON_BYTES: u64 =
+    b"{\"start_row\":1,\"start_column\":1,\"end_row\":1,\"end_column\":1}".len() as u64;
+
 pub(crate) struct Run {
     directory: PathBuf,
     owned: Vec<PathBuf>,
@@ -17,6 +22,7 @@ pub(crate) struct Run {
     suffixes: HashMap<String, usize>,
     sheets: Vec<SheetManifest>,
     remaining: u64,
+    reserved_merge_bytes: u64,
 }
 
 struct LimitedWriter<'a, W> {
@@ -125,6 +131,7 @@ impl Run {
             suffixes: HashMap::new(),
             sheets: vec![],
             remaining: MAX_OUTPUT_BYTES,
+            reserved_merge_bytes: 0,
         };
         if let Err(error) = run.file(".incomplete").and_then(|mut file| {
             file.write_all(b"Incomplete ODS2TSV export. Do not consume this directory.\n")
@@ -178,6 +185,16 @@ impl Run {
             inner: output,
             remaining: &mut self.remaining,
         }))?;
+        // Reserve before retaining this sheet, so tiny repeated empty merges cannot accumulate
+        // across all sheets until serialization. Each sheet's temporary expansion is separately
+        // bounded by MAX_MERGES. Later TSVs must leave room for these future JSON bytes.
+        let reservation = written.ranges.len() as u64 * MIN_MERGE_JSON_BYTES;
+        self.remaining = self.remaining.checked_sub(reservation).ok_or_else(|| {
+            invalid(format!(
+                "merged-range metadata cannot fit within {MAX_OUTPUT_BYTES} total TSV/manifest bytes"
+            ))
+        })?;
+        self.reserved_merge_bytes += reservation;
         self.sheets.push(SheetManifest {
             position: self.sheets.len() + 1,
             name: sheet.name,
@@ -231,6 +248,10 @@ impl Run {
             },
             sheets: std::mem::take(&mut self.sheets),
         };
+        // No TSV writes follow. Refund the lower bound once and let the physical counter charge
+        // the actual JSON/text bytes, preserving the exact combined output boundary.
+        self.remaining += self.reserved_merge_bytes;
+        self.reserved_merge_bytes = 0;
         let mut json = BufWriter::new(LimitedWriter {
             inner: self.file("manifest.json")?,
             remaining: &mut self.remaining,
@@ -293,6 +314,79 @@ impl Run {
 mod tests {
     use super::*;
     use crate::sheet::{Cell, Row};
+
+    fn empty_merge() -> Sheet {
+        Sheet {
+            name: "Merge".into(),
+            rows: vec![Row {
+                start: 0,
+                repeat: 1,
+                cells: vec![Cell {
+                    column: 0,
+                    repeat: 1,
+                    row_span: 1,
+                    column_span: 2,
+                    value: String::new(),
+                    missing_formula: false,
+                }],
+            }],
+        }
+    }
+
+    #[test]
+    fn merge_reservations_stop_accumulation_during_sheet_processing() {
+        let parent = tempfile::tempdir().unwrap();
+        let options = Options {
+            output: Some(parent.path().join("out")),
+            ..Options::default()
+        };
+        let mut run = Run::new(Path::new("source.fods"), &options).unwrap();
+        run.remaining = 2 * MIN_MERGE_JSON_BYTES;
+        run.write(empty_merge()).unwrap();
+        run.write(empty_merge()).unwrap();
+        let error = run.write(empty_merge()).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("merged-range metadata cannot fit")
+        );
+        assert_eq!(
+            run.sheets.len(),
+            2,
+            "the rejected sheet must not be retained"
+        );
+        assert!(!run.directory.join("manifest.json").exists());
+        let error = run.abort(error);
+        assert!(!options.output.as_ref().unwrap().exists(), "{error}");
+    }
+
+    #[test]
+    fn merge_reservation_is_refunded_once_for_exact_physical_accounting() {
+        let parent = tempfile::tempdir().unwrap();
+        let options = Options {
+            output: Some(parent.path().join("out")),
+            ..Options::default()
+        };
+        let mut run = Run::new(Path::new("source.fods"), &options).unwrap();
+        let initial = 5000;
+        run.remaining = initial;
+        run.write(empty_merge()).unwrap();
+        assert_eq!(run.remaining, initial - MIN_MERGE_JSON_BYTES);
+        let export = run
+            .finish("fods", 0, Path::new("source.fods"), &options)
+            .unwrap();
+        let bytes: u64 = fs::read_dir(&export.directory)
+            .unwrap()
+            .map(|entry| entry.unwrap().metadata().unwrap().len())
+            .sum();
+        assert_eq!(
+            run.remaining,
+            initial - bytes,
+            "reservations must not be charged again"
+        );
+        assert_eq!(run.reserved_merge_bytes, 0);
+        assert_eq!(export.manifest.sheets[0].merged_ranges.len(), 1);
+    }
 
     #[test]
     fn output_byte_counter_is_shared_exact_and_counts_encoded_bytes() {

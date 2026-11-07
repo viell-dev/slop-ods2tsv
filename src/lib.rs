@@ -57,6 +57,12 @@ pub enum Error {
         #[source]
         source: xml::reader::Error,
     },
+    #[error("cannot decode workbook XML: {message}")]
+    Decode {
+        message: String,
+        #[source]
+        source: xml::reader::Error,
+    },
     #[error("cannot write TSV: {0}")]
     Csv(#[from] csv::Error),
     #[error("cannot write manifest: {0}")]
@@ -67,13 +73,20 @@ pub enum Error {
 
 impl From<xml::reader::Error> for Error {
     fn from(source: xml::reader::Error) -> Self {
-        if let xml::reader::ErrorKind::Io(error) = source.kind() {
-            Self::Read {
+        match source.kind() {
+            xml::reader::ErrorKind::Io(error) => Self::Read {
                 message: error.to_string(),
                 source,
-            }
-        } else {
-            Self::Xml(source)
+            },
+            xml::reader::ErrorKind::Utf8(error) => Self::Decode {
+                message: error.to_string(),
+                source,
+            },
+            xml::reader::ErrorKind::UnexpectedEof => Self::Decode {
+                message: "unexpected end of input while decoding XML".into(),
+                source,
+            },
+            _ => Self::Xml(source),
         }
     }
 }
