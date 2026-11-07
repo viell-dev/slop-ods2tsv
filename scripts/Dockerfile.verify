@@ -1,0 +1,11 @@
+FROM rust:1.99.1@sha256:8a4e90c7946b74626488b1446f712c0fe0ed1a596cbd3d871684bc9c5433ae07
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    musl-tools python3 python3-venv libreoffice-calc unzip time \
+    && rm -rf /var/lib/apt/lists/*
+RUN rustup component add clippy rustfmt rust-analyzer \
+    && rustup target add x86_64-unknown-linux-musl
+COPY requirements-dev.txt /opt/requirements-dev.txt
+RUN python3 -m venv /opt/verify \
+    && /opt/verify/bin/pip install --no-cache-dir -r /opt/requirements-dev.txt
+ENV PATH="/opt/verify/bin:${PATH}"
+WORKDIR /work

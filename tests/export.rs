@@ -376,7 +376,8 @@ fn only_encrypted_content_is_refused_not_unrelated_embedded_streams() {
 #[test]
 fn flat_input_aliases_row_wrappers_and_utf16_work() {
     let original = xml(&table("Aliases", &format!("<table:table-header-rows>{}</table:table-header-rows><table:table-row-group>{}</table:table-row-group>", row(&cell("H")), row(&cell("café")))))
-        .replace("table:", "t:").replace("xmlns:table=", "xmlns:t=");
+        .replace("<table:", "<t:").replace("</table:", "</t:")
+        .replace(" table:", " t:").replace("xmlns:table=", "xmlns:t=");
     let dir = tempfile::tempdir().unwrap();
     let source = dir.path().join("renamed.data");
     let mut bytes = vec![0xff, 0xfe];

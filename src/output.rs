@@ -4,7 +4,7 @@ use crate::{
     sheet::Sheet,
 };
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs::{self, File, OpenOptions},
     io::{BufWriter, Write},
     path::{Path, PathBuf},
@@ -14,6 +14,7 @@ pub(crate) struct Run {
     directory: PathBuf,
     owned: Vec<PathBuf>,
     names: HashSet<String>,
+    suffixes: HashMap<String, usize>,
     sheets: Vec<SheetManifest>,
 }
 
@@ -77,7 +78,7 @@ impl Run {
                 jiff::Zoned::now().strftime("%Y-%m-%dT%H-%M-%S")
             );
             let mut claimed = None;
-            for attempt in 1..=1000 {
+            for attempt in 1..=usize::MAX {
                 let path = PathBuf::from(if attempt == 1 {
                     base.clone()
                 } else {
@@ -98,6 +99,7 @@ impl Run {
             directory,
             owned: vec![],
             names: HashSet::new(),
+            suffixes: HashMap::new(),
             sheets: vec![],
         };
         if let Err(error) = run.file(".incomplete").and_then(|mut file| {
@@ -122,8 +124,12 @@ impl Run {
 
     pub fn write(&mut self, sheet: Sheet) -> Result<(), Error> {
         let base = safe_name(&sheet.name);
-        let mut chosen = None;
-        for attempt in 1..=1000 {
+        let (file, output) = loop {
+            let next = self.suffixes.entry(base.to_lowercase()).or_insert(1);
+            let attempt = *next;
+            *next = next
+                .checked_add(1)
+                .ok_or_else(|| invalid("filename suffix overflow"))?;
             let name = if attempt == 1 {
                 format!("{base}.tsv")
             } else {
@@ -134,8 +140,7 @@ impl Run {
             }
             match self.file(&name) {
                 Ok(file) => {
-                    chosen = Some((name, file));
-                    break;
+                    break (name, file);
                 }
                 Err(Error::Io { source, .. })
                     if source.kind() == std::io::ErrorKind::AlreadyExists =>
@@ -144,9 +149,7 @@ impl Run {
                 }
                 Err(error) => return Err(error),
             }
-        }
-        let (file, output) =
-            chosen.ok_or_else(|| invalid("could not claim a distinct sheet filename"))?;
+        };
         let written = sheet.write(BufWriter::new(output))?;
         self.sheets.push(SheetManifest {
             position: self.sheets.len() + 1,
@@ -263,5 +266,26 @@ mod tests {
         assert_eq!(safe_name(". ."), "Sheet");
         assert_eq!(safe_name("🦀 café"), "🦀 café");
         assert!(safe_name(&"🦀".repeat(100)).encode_utf16().count() <= 80);
+    }
+
+    #[test]
+    fn cleanup_preserves_unrelated_contents_and_leaves_marker() {
+        let parent = tempfile::tempdir().unwrap();
+        let destination = parent.path().join("out");
+        let mut run = Run::new(
+            Path::new("input.ods"),
+            &Options {
+                output: Some(destination.clone()),
+                ..Options::default()
+            },
+        )
+        .unwrap();
+        drop(run.file("owned.tsv").unwrap());
+        fs::write(destination.join("unrelated"), b"keep").unwrap();
+        let error = run.abort(invalid("synthetic failure"));
+        assert!(error.to_string().contains("cleanup incomplete"));
+        assert_eq!(fs::read(destination.join("unrelated")).unwrap(), b"keep");
+        assert!(!destination.join("owned.tsv").exists());
+        assert!(destination.join(".incomplete").exists());
     }
 }

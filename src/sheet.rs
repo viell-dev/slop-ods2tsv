@@ -194,6 +194,35 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
 
+    #[test]
+    fn sink_failure_is_not_reported_as_success() {
+        struct Fails;
+        impl Write for Fails {
+            fn write(&mut self, _: &[u8]) -> std::io::Result<usize> {
+                Err(std::io::Error::other("synthetic write failure"))
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Err(std::io::Error::other("synthetic flush failure"))
+            }
+        }
+        let sheet = Sheet {
+            name: "failure".into(),
+            rows: vec![Row {
+                start: 0,
+                repeat: 1,
+                cells: vec![Cell {
+                    column: 0,
+                    repeat: 1,
+                    row_span: 1,
+                    column_span: 1,
+                    value: "value".into(),
+                    missing_formula: false,
+                }],
+            }],
+        };
+        assert!(sheet.write(Fails).is_err());
+    }
+
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(128))]
         #[test]
@@ -210,6 +239,24 @@ mod tests {
                 .from_reader(bytes.as_slice()).records().map(|record| record.unwrap().iter().map(str::to_owned).collect()).collect();
             prop_assert_eq!(actual, expected);
             prop_assert_eq!(written.columns, width);
+        }
+
+        #[test]
+        fn vertical_merges_match_a_dense_reference(values in prop::collection::vec(("[a-z]{0,3}", 1usize..6), 1..10)) {
+            let cells = values.iter().enumerate().map(|(column, (value, height))| Cell {
+                column, repeat: 1, row_span: *height, column_span: 1, value: value.clone(), missing_formula: false,
+            }).collect();
+            let sheet = Sheet { name: "generated merges".into(), rows: vec![Row { start: 0, repeat: 1, cells }] };
+            let width = values.iter().rposition(|(value, _)| !value.is_empty()).map_or(0, |column| column + 1);
+            let height = values.iter().filter(|(value, _)| !value.is_empty()).map(|(_, height)| *height).max().unwrap_or(0);
+            let expected: Vec<Vec<String>> = (0..height).map(|r| values[..width].iter()
+                .map(|(value, extent)| if r < *extent { value.clone() } else { String::new() }).collect()).collect();
+            let mut bytes = Vec::new();
+            let written = sheet.write(&mut bytes).unwrap();
+            let actual: Vec<Vec<String>> = csv::ReaderBuilder::new().delimiter(b'\t').has_headers(false)
+                .from_reader(bytes.as_slice()).records().map(|record| record.unwrap().iter().map(str::to_owned).collect()).collect();
+            prop_assert_eq!(actual, expected);
+            prop_assert_eq!(written.ranges.len(), values.iter().filter(|(_, extent)| *extent > 1).count());
         }
     }
 }

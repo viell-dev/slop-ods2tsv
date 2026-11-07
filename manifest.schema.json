@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/viell-dev/slop-ods2tsv/main/manifest.schema.json",
+  "title": "ODS2TSV manifest schema 1",
+  "type": "object",
+  "required": ["schema_version", "exporter", "source", "exported_at", "options", "tsv", "sheets"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "exporter": {
+      "type": "object", "required": ["name", "version"],
+      "properties": { "name": { "const": "ods2tsv" }, "version": { "type": "string", "minLength": 1 } }
+    },
+    "source": {
+      "type": "object", "required": ["name", "format", "size_bytes"],
+      "properties": {
+        "name": { "type": "string" }, "format": { "enum": ["ods", "fods"] },
+        "size_bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "exported_at": { "type": "string", "format": "date-time" },
+    "options": {
+      "type": "object", "required": ["value_mode", "grid_origin", "rectangular", "merged_cells", "trim"],
+      "properties": {
+        "value_mode": { "enum": ["saved-text", "raw"] }, "grid_origin": { "const": "A1" },
+        "rectangular": { "const": true }, "merged_cells": { "const": "fill" },
+        "trim": { "const": "trailing-empty-rows-and-columns" }
+      }
+    },
+    "tsv": {
+      "type": "object", "required": ["encoding", "bom", "delimiter", "quote", "doublequote", "record_terminator"],
+      "properties": {
+        "encoding": { "const": "utf-8" }, "bom": { "const": false }, "delimiter": { "const": "\t" },
+        "quote": { "const": "\"" }, "doublequote": { "const": true }, "record_terminator": { "const": "\r\n" }
+      }
+    },
+    "sheets": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["position", "name", "file", "rows", "columns", "merged_ranges", "warnings"],
+        "properties": {
+          "position": { "type": "integer", "minimum": 1 }, "name": { "type": "string" },
+          "file": { "type": "string", "pattern": "^[^/\\\\]+\\.tsv$" },
+          "rows": { "type": "integer", "minimum": 0 }, "columns": { "type": "integer", "minimum": 0 },
+          "merged_ranges": {
+            "type": "array", "maxItems": 100000,
+            "items": {
+              "type": "object", "required": ["start_row", "start_column", "end_row", "end_column"],
+              "properties": {
+                "start_row": { "type": "integer", "minimum": 1 }, "start_column": { "type": "integer", "minimum": 1 },
+                "end_row": { "type": "integer", "minimum": 1 }, "end_column": { "type": "integer", "minimum": 1 }
+              }
+            }
+          },
+          "warnings": {
+            "type": "array", "items": {
+              "type": "object", "required": ["code", "count", "message"],
+              "properties": {
+                "code": { "type": "string" }, "count": { "type": "integer", "minimum": 1 }, "message": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
