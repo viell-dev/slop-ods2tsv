@@ -20,7 +20,7 @@ def main():
         output = subprocess.check_output([str(sorted(candidates)[-1]), "/dependents", str(binary)], text=True)
         imports = {name.lower() for name in re.findall(r'(?im)^\s*([a-z0-9_.-]+\.dll)\s*$', output)}
         assert imports, "no import table found"
-        os_dlls = {"advapi32.dll", "bcrypt.dll", "crypt32.dll", "dbghelp.dll", "iphlpapi.dll", "kernel32.dll",
+        os_dlls = {"advapi32.dll", "bcrypt.dll", "bcryptprimitives.dll", "crypt32.dll", "dbghelp.dll", "iphlpapi.dll", "kernel32.dll",
                    "kernelbase.dll", "ntdll.dll", "ole32.dll", "psapi.dll", "secur32.dll", "shell32.dll",
                    "user32.dll", "userenv.dll", "version.dll", "ws2_32.dll"}
         unexpected = {name for name in imports if name not in os_dlls and not name.startswith(("api-ms-win-core-", "ext-ms-win-"))}

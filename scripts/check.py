@@ -76,7 +76,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="ods2tsv check ") as directory:
         manifest = corpus(binary, Path(directory))
         assert manifest["exporter"]["version"] == version
-    for path in [*ROOT.glob("*.md"), *ROOT.glob("docs/*.md")]:
+    for path in [*ROOT.glob("*.md"), *ROOT.glob("docs/*.md"), *ROOT.glob("licenses/*.md")]:
         text = re.sub(r'```.*?```', '', path.read_text(encoding="utf-8"), flags=re.S)
         for link in re.findall(r'\]\(([^)]+)\)', text):
             if "://" in link or link.startswith("#") or link.startswith("mailto:"):

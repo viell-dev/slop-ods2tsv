@@ -21,7 +21,7 @@ must try a representative candidate before the first stable release.
 Download a ZIP and its matching `.sha256` file from
 [GitHub releases](https://github.com/viell-dev/slop-ods2tsv/releases):
 
-- Windows x86-64: `ods2tsv-<version>-x86_64-pc-windows-msvc.zip`.
+- Windows 10+ x86-64: `ods2tsv-<version>-x86_64-pc-windows-msvc.zip`.
 - Linux x86-64: `ods2tsv-<version>-x86_64-unknown-linux-musl.zip`.
 
 Verify the ZIP with `Get-FileHash <archive> -Algorithm SHA256` in PowerShell, comparing the result
@@ -134,4 +134,5 @@ handling. This documented contract is the compatibility reference.
 
 ## License
 
-GPL-3.0-only. See [COPYING.md](COPYING.md).
+GPL-3.0-only. See [COPYING.md](COPYING.md). Binary ZIPs also contain Cargo dependency notices and
+[runtime notices](licenses/README.md).

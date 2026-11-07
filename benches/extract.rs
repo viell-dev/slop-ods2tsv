@@ -21,6 +21,10 @@ fn benchmarks(c: &mut Criterion) {
         let input = tempfile::tempdir().unwrap();
         let source = input.path().join("bench.fods");
         fs::write(&source, fixture(&body)).unwrap();
+        eprintln!(
+            "Fixture {name}: {} input bytes, {rows} rows, {columns} columns",
+            fs::metadata(&source).unwrap().len()
+        );
         c.bench_function(name, |b| {
             b.iter_batched(
                 || tempfile::tempdir().unwrap(),

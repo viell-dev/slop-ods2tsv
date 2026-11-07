@@ -31,7 +31,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install pinned toolchain
-        run: rustup show active-toolchain
+        run: rustup toolchain install --no-self-update
       - uses: Swatinem/rust-cache@2201cc584a476d1b508be977bbe4b7d1c7a52e9c # v2.9.3
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
