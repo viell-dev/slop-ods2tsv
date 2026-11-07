@@ -130,6 +130,8 @@ impl Sheet {
         expiry.clear();
         let mut next_merge = 0;
         let mut next_row = 0;
+        let mut loaded_row = None;
+        let mut values = Vec::new();
         let mut writer = csv::WriterBuilder::new()
             .delimiter(b'\t')
             .has_headers(false)
@@ -143,10 +145,16 @@ impl Sheet {
             }
             let mut fields = vec![""; width];
             if let Some(row) = self.rows.get(next_row).filter(|row| row.start <= r) {
-                for cell in &row.cells {
-                    if cell.value.is_empty() || cell.column >= width {
-                        continue;
-                    }
+                if loaded_row != Some(next_row) {
+                    values.clear();
+                    values.extend(
+                        row.cells
+                            .iter()
+                            .filter(|cell| !cell.value.is_empty() && cell.column < width),
+                    );
+                    loaded_row = Some(next_row);
+                }
+                for cell in &values {
                     fields[cell.column..add(cell.column, cell.repeat)?.min(width)]
                         .fill(&cell.value);
                 }

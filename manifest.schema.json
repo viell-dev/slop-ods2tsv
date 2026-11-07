@@ -22,6 +22,7 @@
       "type": "object", "required": ["value_mode", "grid_origin", "rectangular", "merged_cells", "trim"],
       "properties": {
         "value_mode": { "enum": ["saved-text", "raw"] }, "grid_origin": { "const": "A1" },
+        "preserve_whitespace": { "type": "boolean", "default": false },
         "rectangular": { "const": true }, "merged_cells": { "const": "fill" },
         "trim": { "const": "trailing-empty-rows-and-columns" }
       }

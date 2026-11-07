@@ -1,8 +1,4 @@
-use crate::{
-    Error, MAX_XML_BYTES, invalid, io,
-    reader::{self, ValueMode},
-    sheet::Sheet,
-};
+use crate::{Error, MAX_XML_BYTES, MAX_XML_DEPTH, Options, invalid, io, reader, sheet::Sheet};
 use std::{
     fs::File,
     io::{BufRead, BufReader, Read},
@@ -50,7 +46,7 @@ impl Source {
                 return Err(invalid("package declares a non-spreadsheet document type"));
             }
             if let Some(manifest) = metadata(&mut archive, "META-INF/manifest.xml", 1024 * 1024)?
-                && encrypted_content(&manifest)
+                && encrypted_content(&manifest)?
             {
                 return Err(invalid(
                     "content.xml is encrypted; save an unencrypted copy before exporting",
@@ -75,7 +71,7 @@ impl Source {
 
     pub fn read(
         &mut self,
-        mode: ValueMode,
+        options: &Options,
         emit: impl FnMut(Sheet) -> Result<(), Error>,
     ) -> Result<(), Error> {
         match &mut self.kind {
@@ -86,7 +82,7 @@ impl Source {
                         inner: content,
                         remaining: MAX_XML_BYTES,
                     }),
-                    mode,
+                    options,
                     emit,
                 )
             }
@@ -95,7 +91,7 @@ impl Source {
                     inner: file,
                     remaining: MAX_XML_BYTES,
                 },
-                mode,
+                options,
                 emit,
             ),
         }
@@ -126,7 +122,7 @@ fn metadata(
     }
 }
 
-fn encrypted_content(bytes: &[u8]) -> bool {
+fn encrypted_content(bytes: &[u8]) -> Result<bool, Error> {
     const NS: &str = "urn:oasis:names:tc:opendocument:xmlns:manifest:1.0";
     let mut depth = 0usize;
     let mut entry = None;
@@ -139,6 +135,11 @@ fn encrypted_content(bytes: &[u8]) -> bool {
                 name, attributes, ..
             }) => {
                 depth += 1;
+                if depth > MAX_XML_DEPTH {
+                    return Err(invalid(format!(
+                        "package manifest XML exceeds {MAX_XML_DEPTH} open elements"
+                    )));
+                }
                 if name.namespace.as_deref() == Some(NS) {
                     if name.local_name == "file-entry"
                         && attributes.iter().any(|attribute| {
@@ -150,7 +151,7 @@ fn encrypted_content(bytes: &[u8]) -> bool {
                         entry = Some(depth);
                     }
                     if name.local_name == "encryption-data" && entry.is_some() {
-                        return true;
+                        return Ok(true);
                     }
                 }
             }
@@ -160,11 +161,11 @@ fn encrypted_content(bytes: &[u8]) -> bool {
                 }
                 depth = depth.saturating_sub(1);
             }
-            Err(_) => return false, // Optional metadata is not a second workbook validity gate.
+            Err(_) => return Ok(false), // Optional metadata is not a second workbook validity gate.
             _ => {}
         }
     }
-    false
+    Ok(false)
 }
 
 struct Limited<R> {
@@ -208,5 +209,24 @@ mod tests {
             remaining: 3,
         };
         assert!(excessive.read_to_end(&mut Vec::new()).is_err());
+    }
+
+    #[test]
+    fn read_budget_errors_keep_their_cause_without_an_xml_position() {
+        let error = reader::read(
+            Limited {
+                inner: &b"<document/>"[..],
+                remaining: 3,
+            },
+            &Options::default(),
+            |_| Ok(()),
+        )
+        .unwrap_err();
+        assert!(matches!(error, Error::Read { .. }));
+        assert_eq!(
+            error.to_string(),
+            format!("cannot read workbook content: content XML exceeds {MAX_XML_BYTES} bytes")
+        );
+        assert!(std::error::Error::source(&error).is_some());
     }
 }

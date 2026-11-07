@@ -1,5 +1,5 @@
 use crate::{
-    Error, Export, Manifest, Options, SheetManifest, invalid, io,
+    Error, Export, MAX_OUTPUT_BYTES, Manifest, Options, SheetManifest, invalid, io,
     manifest::{Dialect, Exporter, Settings, Source},
     sheet::Sheet,
 };
@@ -16,6 +16,29 @@ pub(crate) struct Run {
     names: HashSet<String>,
     suffixes: HashMap<String, usize>,
     sheets: Vec<SheetManifest>,
+    remaining: u64,
+}
+
+struct LimitedWriter<'a, W> {
+    inner: W,
+    remaining: &'a mut u64,
+}
+
+impl<W: Write> Write for LimitedWriter<'_, W> {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        if bytes.len() as u64 > *self.remaining {
+            return Err(std::io::Error::other(format!(
+                "export exceeds {MAX_OUTPUT_BYTES} total TSV/manifest bytes"
+            )));
+        }
+        let written = self.inner.write(bytes)?;
+        *self.remaining -= written as u64;
+        Ok(written)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
 }
 
 fn safe_name(name: &str) -> String {
@@ -101,6 +124,7 @@ impl Run {
             names: HashSet::new(),
             suffixes: HashMap::new(),
             sheets: vec![],
+            remaining: MAX_OUTPUT_BYTES,
         };
         if let Err(error) = run.file(".incomplete").and_then(|mut file| {
             file.write_all(b"Incomplete ODS2TSV export. Do not consume this directory.\n")
@@ -150,7 +174,10 @@ impl Run {
                 Err(error) => return Err(error),
             }
         };
-        let written = sheet.write(BufWriter::new(output))?;
+        let written = sheet.write(BufWriter::new(LimitedWriter {
+            inner: output,
+            remaining: &mut self.remaining,
+        }))?;
         self.sheets.push(SheetManifest {
             position: self.sheets.len() + 1,
             name: sheet.name,
@@ -188,6 +215,7 @@ impl Run {
             exported_at: jiff::Timestamp::now().to_string(),
             options: Settings {
                 value_mode: options.values.label().into(),
+                preserve_whitespace: options.preserve_whitespace,
                 grid_origin: "A1".into(),
                 rectangular: true,
                 merged_cells: "fill".into(),
@@ -203,13 +231,20 @@ impl Run {
             },
             sheets: std::mem::take(&mut self.sheets),
         };
-        let mut json = BufWriter::new(self.file("manifest.json")?);
+        let mut json = BufWriter::new(LimitedWriter {
+            inner: self.file("manifest.json")?,
+            remaining: &mut self.remaining,
+        });
         serde_json::to_writer_pretty(&mut json, &manifest)?;
         json.write_all(b"\n")
             .map_err(|error| io("writing JSON manifest", error))?;
         json.flush()
             .map_err(|error| io("flushing JSON manifest", error))?;
-        let mut text = BufWriter::new(self.file("manifest.txt")?);
+        drop(json);
+        let mut text = BufWriter::new(LimitedWriter {
+            inner: self.file("manifest.txt")?,
+            remaining: &mut self.remaining,
+        });
         text.write_all(manifest.text().as_bytes())
             .map_err(|error| io("writing text manifest", error))?;
         text.flush()
@@ -257,6 +292,102 @@ impl Run {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sheet::{Cell, Row};
+
+    #[test]
+    fn output_byte_counter_is_shared_exact_and_counts_encoded_bytes() {
+        let mut remaining = 5;
+        let mut bytes = Vec::new();
+        let mut writer = LimitedWriter {
+            inner: &mut bytes,
+            remaining: &mut remaining,
+        };
+        writer.write_all("é".as_bytes()).unwrap();
+        writer.write_all(b"abc").unwrap();
+        assert!(
+            writer
+                .write_all(b"x")
+                .unwrap_err()
+                .to_string()
+                .contains("total TSV/manifest bytes")
+        );
+        assert_eq!(bytes, "éabc".as_bytes());
+        assert_eq!(remaining, 0);
+    }
+
+    #[test]
+    fn output_budget_covers_multiple_sheets_and_manifests_with_cleanup() {
+        fn sheet() -> Sheet {
+            Sheet {
+                name: "Budget".into(),
+                rows: vec![Row {
+                    start: 0,
+                    repeat: 1,
+                    cells: vec![Cell {
+                        column: 0,
+                        repeat: 1,
+                        row_span: 1,
+                        column_span: 1,
+                        value: "\"".into(),
+                        missing_formula: false,
+                    }],
+                }],
+            }
+        }
+        // A single quoted quote encodes as four quote bytes plus CRLF, not one value byte.
+        let reference = tempfile::tempdir().unwrap();
+        let options = Options {
+            output: Some(reference.path().join("out")),
+            ..Options::default()
+        };
+        let mut run = Run::new(Path::new("source.ods"), &options).unwrap();
+        run.write(sheet()).unwrap();
+        run.write(sheet()).unwrap();
+        let complete = run
+            .finish("ods", 0, Path::new("source.ods"), &options)
+            .unwrap();
+        let json_bytes = fs::metadata(complete.directory.join("manifest.json"))
+            .unwrap()
+            .len();
+        // Allow timestamp precision to vary by a few bytes; 64 bytes cannot fit the text manifest.
+        for (budget, phase) in [
+            (11, "second sheet"),
+            (12, "JSON manifest"),
+            (12 + json_bytes + 64, "text manifest"),
+        ] {
+            let parent = tempfile::tempdir().unwrap();
+            let options = Options {
+                output: Some(parent.path().join("out")),
+                ..Options::default()
+            };
+            let mut run = Run::new(Path::new("source.ods"), &options).unwrap();
+            run.remaining = budget;
+            run.write(sheet()).unwrap();
+            let result = run.write(sheet());
+            let error = if phase == "second sheet" {
+                result.unwrap_err()
+            } else {
+                result.unwrap();
+                run.finish("ods", 0, Path::new("source.ods"), &options)
+                    .unwrap_err()
+            };
+            if phase == "text manifest" {
+                assert!(
+                    fs::metadata(run.directory.join("manifest.json"))
+                        .unwrap()
+                        .len()
+                        > 0
+                );
+                assert!(run.directory.join("manifest.txt").exists());
+            }
+            assert!(
+                error.to_string().contains("total TSV/manifest bytes"),
+                "{error}"
+            );
+            let error = run.abort(error);
+            assert!(!options.output.as_ref().unwrap().exists(), "{error}");
+        }
+    }
     #[test]
     fn portable_names_handle_windows_devices_and_unicode() {
         for name in ["CON", "NUL.txt", "COM¹", "lpt9", "CONIN$"] {

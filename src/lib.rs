@@ -18,6 +18,10 @@ pub const MAX_XML_BYTES: u64 = 64 * 1024 * 1024;
 pub const MAX_MERGES: usize = 100_000;
 /// Maximum bytes in one extracted cell.
 pub const MAX_CELL_BYTES: usize = 1024 * 1024;
+/// Maximum combined bytes written to TSV files and both manifests in one export.
+pub const MAX_OUTPUT_BYTES: u64 = 256 * 1024 * 1024;
+/// Maximum open XML elements, including ignored subtrees and package metadata.
+pub const MAX_XML_DEPTH: usize = 256;
 
 /// User-selectable export settings.
 #[derive(Debug, Default, Clone)]
@@ -25,6 +29,8 @@ pub struct Options {
     /// An explicit new destination, or a fresh timestamped directory in the current directory.
     pub output: Option<PathBuf>,
     pub values: ValueMode,
+    /// Keep literal whitespace inside cell paragraphs instead of applying ODF collapsing.
+    pub preserve_whitespace: bool,
 }
 
 /// A complete export and its metadata. Only returned after the incomplete marker is removed.
@@ -44,13 +50,32 @@ pub enum Error {
     #[error("cannot read ODF package: {0}")]
     Zip(#[from] zip::result::ZipError),
     #[error("invalid workbook XML: {0}")]
-    Xml(#[from] xml::reader::Error),
+    Xml(#[source] xml::reader::Error),
+    #[error("cannot read workbook content: {message}")]
+    Read {
+        message: String,
+        #[source]
+        source: xml::reader::Error,
+    },
     #[error("cannot write TSV: {0}")]
     Csv(#[from] csv::Error),
     #[error("cannot write manifest: {0}")]
     Json(#[from] serde_json::Error),
     #[error("{0}")]
     Invalid(String),
+}
+
+impl From<xml::reader::Error> for Error {
+    fn from(source: xml::reader::Error) -> Self {
+        if let xml::reader::ErrorKind::Io(error) = source.kind() {
+            Self::Read {
+                message: error.to_string(),
+                source,
+            }
+        } else {
+            Self::Xml(source)
+        }
+    }
 }
 
 pub(crate) fn io(context: impl Into<String>, source: std::io::Error) -> Error {
@@ -71,7 +96,7 @@ pub(crate) fn invalid(message: impl Into<String>) -> Error {
 pub fn export(path: &Path, options: &Options) -> Result<Export, Error> {
     let mut source = input::Source::open(path)?;
     let mut run = output::Run::new(path, options)?;
-    let result = source.read(options.values, |sheet| run.write(sheet));
+    let result = source.read(options, |sheet| run.write(sheet));
     match result.and_then(|()| run.finish(source.format(), source.size(), path, options)) {
         Ok(export) => Ok(export),
         Err(error) => Err(run.abort(error)),

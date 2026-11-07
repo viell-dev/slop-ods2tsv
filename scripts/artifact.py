@@ -1,5 +1,6 @@
 """Unpack and execute the actual release archive, preserving Linux ZIP permissions with unzip."""
 import argparse
+import csv
 import hashlib
 import os
 from pathlib import Path
@@ -30,7 +31,7 @@ def main():
                         "licenses/rust/licenses/Apache-2.0.txt", "README.md", "COPYING.md",
                         "CHANGELOG.md", "CONTRIBUTING.md", "RELEASING.md", "SECURITY.md",
                         "CODE_OF_CONDUCT.md", "docs/FORMAT.md", "manifest.schema.json",
-                        "examples/workbook.fods", ".github/labels.json"}
+                        "examples/workbook.fods", "examples/text-options.fods", ".github/labels.json"}
             if os.name != "nt":
                 required.add("licenses/musl-1.2.5.COPYRIGHT")
             assert required <= set(package.namelist()), "Missing dependency/runtime license inventory"
@@ -55,6 +56,11 @@ def main():
         subprocess.run([sys.executable, str(ROOT / "scripts/check.py"), "--binary", str(binary)], check=True)
         subprocess.run([sys.executable, str(ROOT / "scripts/dependencies.py"), str(binary)], check=True)
         corpus(binary, directory)
+        for raw in (False, True):
+            destination = directory / f"example-text-{raw}"
+            subprocess.run([str(binary), "--preserve-whitespace", *(["--raw"] if raw else []), "-o", str(destination), str(directory / "examples/text-options.fods")], check=True, capture_output=True, timeout=30)
+            with (destination / "Text.tsv").open(encoding="utf-8", newline="") as stream:
+                assert list(csv.reader(stream, delimiter="\t")) == [["  café  text "], ["7" if raw else "0007"], ["#DIV/0!"]]
     print(f"Verified installed archive: {archive.name}")
 
 

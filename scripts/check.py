@@ -35,6 +35,7 @@ def corpus(binary, directory):
         assert Path(process.stdout.strip()) == destination
         manifest = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))
         validator.validate(manifest)
+        assert manifest["options"]["preserve_whitespace"] is False
         assert [sheet["name"] for sheet in manifest["sheets"]] == ["Zeta", "Empty"]
         assert manifest["sheets"][0]["merged_ranges"] == [{"start_row": 1, "start_column": 1, "end_row": 1, "end_column": 2}]
         with (destination / "Zeta.tsv").open(encoding="utf-8", newline="") as stream:
@@ -46,6 +47,16 @@ def corpus(binary, directory):
         assert rerun.returncode == 1
         assert json.loads((destination / "manifest.json").read_text(encoding="utf-8")) == manifest
         last_manifest = manifest
+    whitespace = directory / "whitespace.fods"
+    whitespace.write_text(HEADER + '<table:table table:name="Spaces"><table:table-row><table:table-cell><text:p>  x  y </text:p></table:table-cell><table:table-cell office:value-type="string" office:string-value="attribute"><text:p>  shown </text:p></table:table-cell></table:table-row></table:table>' + FOOTER, encoding="utf-8")
+    for raw in (False, True):
+        destination = directory / f"preserved-{raw}"
+        subprocess.run([str(binary), "--preserve-whitespace", *(["--raw"] if raw else []), "-o", str(destination), str(whitespace)], check=True, capture_output=True, timeout=30)
+        manifest = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))
+        validator.validate(manifest)
+        assert manifest["options"]["preserve_whitespace"] is True
+        with (destination / "Spaces.tsv").open(encoding="utf-8", newline="") as stream:
+            assert list(csv.reader(stream, delimiter="\t")) == [["  x  y ", "attribute" if raw else "  shown "]]
     broken = directory / "broken.ods"
     with zipfile.ZipFile(broken, "w") as archive:
         archive.writestr("content.xml", content.removesuffix(FOOTER))

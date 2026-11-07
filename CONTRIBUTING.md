@@ -62,9 +62,13 @@ timings on a controlled host; noisy shared-runner timings are not a hard speed g
 synthetic FODS workbook to ODS in a disposable profile and verifies both. No private workbook or
 installed user profile is touched. Linux CI runs it for extraction changes and releases. Artifact
 checks and platform dependencies are described in [RELEASING.md](RELEASING.md).
-The suite checks saved/raw modes, explicit whitespace, cached errors and valid empty formulas,
-repeats and geometry. When a producer rewrites cell XML, inspect that representation and apply the
-documented extraction contract; do not assume round-trip source text and serialized text are equal.
+The suite checks saved/raw and collapsed/preserved-whitespace modes, explicit whitespace, cached
+errors and valid empty formulas, repeats and geometry. When a producer rewrites cell XML, inspect
+that representation and apply the documented extraction contract; do not assume round-trip source
+text and serialized text are equal.
+The repeated-empty benchmark measures source-template scanning separately from necessary output
+work. Deterministic tests enforce nesting/output-byte boundaries and cleanup; timings remain
+observations rather than shared-runner speed gates.
 
 ## Reviews and delivery
 

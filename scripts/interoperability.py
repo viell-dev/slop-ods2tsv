@@ -2,6 +2,7 @@
 import argparse
 import csv
 import json
+from itertools import product
 from pathlib import Path
 import shutil
 import subprocess
@@ -53,8 +54,7 @@ def main():
         whitespace_cell = tree.findall(f".//{table_ns}table-row")[2].findall(f"{table_ns}table-cell")[2]
         paragraphs = whitespace_cell.findall(f"{text_ns}p")
         # Calc emits literal spaces in rich/multi-line cells that it preserves on reopening.
-        # Strict ODF collapsing here loses those spaces: this is the disclosed issue-16 limit,
-        # not a claim that this producer's whitespace is preserved by the converter.
+        # Pin both extraction policies against the saved representation and Calc's own re-read.
         normalized_paragraphs = len(paragraphs) == 2 and all(not list(p) for p in paragraphs) and [p.text for p in paragraphs] == ["a", " b"]
         saved_expected = [row[:] for row in expected]
         if normalized_paragraphs:
@@ -72,21 +72,22 @@ def main():
         with (csv_output / "source.csv").open(encoding="utf-8-sig", newline="") as stream:
             calc_rows = list(csv.reader(stream, delimiter="\t"))
         assert calc_rows[3] == expected[3], f"Calc re-read changed: {calc_rows[3]!r}"
-        print("Pinned known Calc whitespace difference: Calc preserves literal runs; strict ODF extraction collapses them.")
+        print("Calc preserves literal runs; the explicit whitespace option must retain these spaces.")
         for index, workbook in enumerate((source, ods)):
-            for raw in (False, True):
-                destination = temporary / f"export-{index}-{raw}"
-                subprocess.run([str(binary), *(["--raw"] if raw else []), "-o", str(destination), str(workbook)], check=True, timeout=60)
+            for raw, preserve in product((False, True), repeat=2):
+                destination = temporary / f"export-{index}-{raw}-{preserve}"
+                subprocess.run([str(binary), *(["--raw"] if raw else []), *(["--preserve-whitespace"] if preserve else []), "-o", str(destination), str(workbook)], check=True, timeout=60)
                 manifest = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))
+                assert manifest["options"]["preserve_whitespace"] == preserve
                 assert [sheet["name"] for sheet in manifest["sheets"]] == ["Zeta", "Alpha"]
                 with (destination / manifest["sheets"][0]["file"]).open(encoding="utf-8", newline="") as stream:
                     actual = list(csv.reader(stream, delimiter="\t"))
-                assert actual == (saved_expected if workbook == ods else expected), f"{workbook.suffix}, raw={raw}: {actual!r}"
+                assert actual == (saved_expected if workbook == ods and not preserve else expected), f"{workbook.suffix}, raw={raw}, preserve={preserve}: {actual!r}"
                 assert manifest["sheets"][0]["merged_ranges"] == [{"start_row": 1, "start_column": 1, "end_row": 1, "end_column": 2}]
                 assert all(not sheet["warnings"] for sheet in manifest["sheets"])
                 assert manifest["sheets"][1]["rows"] == 0
                 assert manifest["sheets"][1]["columns"] == 0
-    print("Verified FODS and LibreOffice-saved ODS in saved/raw modes: text, errors/empty formula, repeats, coordinates, order, empty sheet and merges.")
+    print("Verified FODS and LibreOffice-saved ODS in saved/raw and ODF/preserved-whitespace modes: text, errors/empty formula, repeats, coordinates, order, empty sheet and merges.")
 
 
 if __name__ == "__main__":
