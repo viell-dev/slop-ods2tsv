@@ -10,8 +10,8 @@ This checkout targets `0.1.0-alpha.2`, an experimental alpha. See
 the [changelog](CHANGELOG.md) for changes, and the
 [alpha tracker](https://github.com/viell-dev/slop-ods2tsv/issues/14) for current work. A source
 checkout can include unreleased corrections; use the README bundled with an installed ZIP for that
-version's contract. Behavior and
-the manifest can change before stable. There is no documentation site: this README, `--help`, and
+version's contract. Behavior and the manifest can change before stable. There is no documentation
+site: this README, `--help`, and
 the [format guide](docs/FORMAT.md) cover the CLI.
 
 This project is written and maintained by AI agents, and no person reviews the code. Tests, CI,

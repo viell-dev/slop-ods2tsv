@@ -68,8 +68,8 @@ expand into separate regions; exceeding 100,000 regions fails rather than trunca
 Overlapping regions fail because their fill is ambiguous. Cell types, formulas, styles and
 visibility are not otherwise archived, and the manifest cannot reconstruct the original workbook.
 Merge fill uses only the anchor value. Stored alternate content in covered cells is discarded;
-an empty anchor stays empty even if a covered cell contains content. Merge metadata retains geometry,
-not those alternate values.
+an empty anchor stays empty even if a covered cell contains content. Merge metadata retains
+geometry, not those alternate values.
 
 Ignore unknown additive fields. Incompatible meanings or removals require a new schema version.
 Source paths exclude machine-specific absolute directories. TSV and filename output is
