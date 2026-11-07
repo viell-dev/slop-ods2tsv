@@ -52,7 +52,7 @@ error and use platform CI evidence. Do not bypass security policy; report actual
 
 ## Benchmarks and real application checks
 
-`cargo bench --locked --bench extract` measures complete exports over dense, sparse, repeated,
+`cargo bench --locked --bench extract` measures complete exports over dense flat/packaged, sparse, repeated,
 merged and empty-tail synthetic inputs. Inputs and fresh output parents are prepared outside timed
 work; conversion includes file/manifest output. Assert dimensions and record commit, compiler,
 target, host, fixture size and method. Retain reports and correctness controls. Compare timings on
@@ -62,6 +62,9 @@ a controlled host; noisy shared-runner timings are not a hard speed gate.
 synthetic FODS workbook to ODS in a disposable profile and verifies both. No private workbook or
 installed user profile is touched. Linux CI runs it for extraction changes and releases. Artifact
 checks and platform dependencies are described in [RELEASING.md](RELEASING.md).
+The suite checks saved/raw modes, explicit whitespace, cached errors and valid empty formulas,
+repeats and geometry. When a producer rewrites cell XML, inspect that representation and apply the
+documented extraction contract; do not assume round-trip source text and serialized text are equal.
 
 ## Reviews and delivery
 

@@ -1,6 +1,7 @@
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use ods2tsv::{Options, export};
-use std::{fs, time::Duration};
+use std::{fs, io::Write, time::Duration};
+use zip::{ZipWriter, write::SimpleFileOptions};
 
 fn fixture(body: &str) -> String {
     format!(
@@ -11,7 +12,8 @@ fn benchmarks(c: &mut Criterion) {
     let value = "<table:table-cell><text:p>Value</text:p></table:table-cell>";
     let dense = format!("<table:table-row>{}</table:table-row>", value.repeat(12)).repeat(2000);
     let cases = [
-        ("dense-24000-fields", dense, 2000, 12),
+        ("dense-24000-fields", dense.clone(), 2000, 12),
+        ("dense-24000-fields-ods", dense, 2000, 12),
         ("repeated-1000000-fields", "<table:table-row table:number-rows-repeated='100000'><table:table-cell table:number-columns-repeated='10'><text:p>V</text:p></table:table-cell></table:table-row>".to_owned(), 100000, 10),
         ("empty-million-row-tail", format!("<table:table-row>{value}</table:table-row><table:table-row table:number-rows-repeated='1048575'><table:table-cell table:number-columns-repeated='16384'/></table:table-row>"), 1, 1),
         ("sparse-100000-fields", format!("<table:table-row table:number-rows-repeated='199'/><table:table-row><table:table-cell table:number-columns-repeated='499'/>{value}</table:table-row>"), 200, 500),
@@ -19,8 +21,43 @@ fn benchmarks(c: &mut Criterion) {
     ];
     for (name, body, rows, columns) in cases {
         let input = tempfile::tempdir().unwrap();
-        let source = input.path().join("bench.fods");
-        fs::write(&source, fixture(&body)).unwrap();
+        let content = fixture(&body);
+        let packaged = name.ends_with("-ods");
+        let source = input
+            .path()
+            .join(if packaged { "bench.ods" } else { "bench.fods" });
+        if packaged {
+            let mut archive = ZipWriter::new(fs::File::create(&source).unwrap());
+            archive
+                .start_file(
+                    "content.xml",
+                    SimpleFileOptions::default()
+                        .compression_method(zip::CompressionMethod::Deflated),
+                )
+                .unwrap();
+            archive.write_all(content.as_bytes()).unwrap();
+            archive.finish().unwrap();
+            // A correctness preflight is outside timing, including the full quoted TSV bytes.
+            let checked = export(
+                &source,
+                &Options {
+                    output: Some(input.path().join("checked")),
+                    ..Options::default()
+                },
+            )
+            .unwrap();
+            let expected = (std::iter::repeat_n("Value", 12)
+                .collect::<Vec<_>>()
+                .join("\t")
+                + "\r\n")
+                .repeat(2000);
+            assert_eq!(
+                fs::read(checked.directory.join("Bench.tsv")).unwrap(),
+                expected.as_bytes()
+            );
+        } else {
+            fs::write(&source, content).unwrap();
+        }
         eprintln!(
             "Fixture {name}: {} input bytes, {rows} rows, {columns} columns",
             fs::metadata(&source).unwrap().len()

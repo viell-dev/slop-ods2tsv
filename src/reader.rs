@@ -14,6 +14,7 @@ const OFFICE: &str = "urn:oasis:names:tc:opendocument:xmlns:office:1.0";
 const TABLE: &str = "urn:oasis:names:tc:opendocument:xmlns:table:1.0";
 const TEXT: &str = "urn:oasis:names:tc:opendocument:xmlns:text:1.0";
 const DRAW: &str = "urn:oasis:names:tc:opendocument:xmlns:drawing:1.0";
+const CALCEXT: &str = "urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0";
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ValueMode {
@@ -57,6 +58,7 @@ struct Pending {
     covered: bool,
     raw: Option<String>,
     formula: bool,
+    cached_error: bool,
     paragraphs: Vec<String>,
     paragraph_depth: usize,
     pending_space: bool,
@@ -74,6 +76,16 @@ impl Pending {
             Some("string") => "string-value",
             _ => "",
         };
+        let cached_error = attr(attributes, CALCEXT, "value-type") == Some("error");
+        // LibreOffice stores error cells with an empty string attribute and the error in paragraphs.
+        let raw = if covered || cached_error {
+            None
+        } else {
+            attr(attributes, OFFICE, raw_attribute)
+        };
+        if raw.is_some_and(|value| value.len() > MAX_CELL_BYTES) {
+            return Err(invalid(format!("cell exceeds {MAX_CELL_BYTES} text bytes")));
+        }
         Ok(Self {
             cell: Cell {
                 column,
@@ -84,8 +96,9 @@ impl Pending {
                 missing_formula: false,
             },
             covered,
-            raw: attr(attributes, OFFICE, raw_attribute).map(str::to_owned),
+            raw: raw.map(str::to_owned),
             formula: attr(attributes, TABLE, "formula").is_some(),
+            cached_error,
             paragraphs: vec![],
             paragraph_depth: 0,
             pending_space: false,
@@ -139,15 +152,16 @@ impl Pending {
             self.pending_space = false;
         }
         self.push(&ch.to_string().repeat(repeat))?;
-        self.last_space = true;
+        self.last_space = false;
         Ok(())
     }
 
     fn finish(mut self, mode: ValueMode) -> Result<Cell, Error> {
         if !self.covered {
-            self.cell.missing_formula =
-                self.formula && self.raw.is_none() && self.paragraphs.is_empty();
-            let display = (!self.paragraphs.is_empty()).then(|| self.paragraphs.join("\n"));
+            let display = (!self.paragraphs.is_empty())
+                .then(|| self.paragraphs.join("\n"))
+                .filter(|text| !self.cached_error || !text.is_empty());
+            self.cell.missing_formula = self.formula && self.raw.is_none() && display.is_none();
             self.cell.value = match mode {
                 ValueMode::SavedText => display.or(self.raw),
                 ValueMode::Raw => self.raw.or(display),
@@ -171,8 +185,8 @@ pub(crate) fn read(
         .allow_multiple_root_elements(false)
         .whitespace_to_characters(true)
         .cdata_to_characters(true)
-        .max_data_length(MAX_CELL_BYTES)
-        .max_attribute_length(MAX_CELL_BYTES)
+        // The source has its own 64 MiB byte budget. Cell projection enforces its smaller limit;
+        // applying that limit to XML events would also reject large ignored image/annotation data.
         .max_entity_expansion_length(MAX_CELL_BYTES)
         .max_entity_expansion_depth(4)
         .create_reader(source);
@@ -213,6 +227,8 @@ pub(crate) fn read(
                 let ignored = name.namespace.as_deref().is_some_and(|ns| {
                     ns == DRAW || ns == "urn:oasis:names:tc:opendocument:xmlns:dr3d:1.0"
                 }) || is(&name, OFFICE, "annotation")
+                    || is(&name, TEXT, "ruby-text")
+                    || is(&name, TEXT, "note-body")
                     || is(&name, TABLE, "tracked-changes")
                     || (sheet.is_some() && is(&name, TABLE, "table"));
                 if ignored {

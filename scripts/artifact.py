@@ -16,7 +16,9 @@ def main():
     parser.add_argument("archive", type=Path)
     args = parser.parse_args()
     archive = args.archive.resolve()
-    expected = archive.with_suffix(".zip.sha256").read_text(encoding="utf-8").split()[0]
+    checksum = archive.with_suffix(".zip.sha256").read_bytes()
+    assert checksum.endswith(b"\n") and b"\r" not in checksum, "Checksum sidecar must use LF on every platform"
+    expected = checksum.decode("utf-8").split()[0]
     assert hashlib.sha256(archive.read_bytes()).hexdigest() == expected
     name = "ods2tsv.exe" if os.name == "nt" else "ods2tsv"
     with tempfile.TemporaryDirectory(prefix="ods2tsv installed ") as directory:

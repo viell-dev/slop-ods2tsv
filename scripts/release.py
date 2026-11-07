@@ -44,7 +44,7 @@ def main():
     entry = re.search(rf'(?ms)^## {re.escape(version)}\n(.*?)(?=^## |\Z)', changelog)
     assert entry, "No changelog entry for this version"
     notes = ROOT / "dist/release-notes.md"
-    notes.write_text(entry[1].strip() + f"\n\nDownload the ZIP and matching SHA-256 file for your platform. Extract and run; no language runtime is required. [Installation, commands and limits](https://github.com/{REPOSITORY}/blob/{version}/README.md).\n\nThis is experimental alpha/beta/RC software, not a stable release. Formulas are not recalculated; content decryption is unsupported. [Release evidence and remaining work](https://github.com/{REPOSITORY}/issues/2).\n", encoding="utf-8")
+    notes.write_text(entry[1].strip() + f"\n\nDownload the ZIP and matching SHA-256 file for your platform. Extract and run; no language runtime is required. [Installation, commands and limits](https://github.com/{REPOSITORY}/blob/{version}/README.md).\n\nThis is an experimental prerelease, not a stable release. Formulas are not recalculated; content decryption is unsupported.\n", encoding="utf-8")
     subprocess.run(["gh", "release", "create", version, *assets, "--repo", REPOSITORY,
                     "--target", sha, "--title", version, "--prerelease", "--latest=false",
                     "--notes-file", str(notes)], cwd=ROOT, check=True)

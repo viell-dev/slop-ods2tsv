@@ -82,10 +82,10 @@ impl Source {
             Kind::Package(archive) => {
                 let content = archive.by_name("content.xml")?;
                 reader::read(
-                    Limited {
+                    BufReader::new(Limited {
                         inner: content,
                         remaining: MAX_XML_BYTES,
-                    },
+                    }),
                     mode,
                     emit,
                 )

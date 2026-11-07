@@ -6,6 +6,7 @@
 prereleases. The initial version is `0.1.0-alpha.1`; a stable scope agreement and human usability
 report are still required before stable. The tracker and preparation PR retain scope, exact commit,
 checks/results, benchmark method, platform evidence, review findings and remaining limits.
+Each version's changelog entry links its own tracker; that entry becomes its release notes.
 
 Every release PR gets independent agent review of all changes since the previous release, plus
 author review after checks pass. Record the reviewed revision and verify material fixes. Required
