@@ -584,3 +584,30 @@ fn covered_content_is_discarded_in_favor_of_the_merge_anchor() {
         assert_eq!(output.manifest.sheets[0].merged_ranges.len(), 1);
     }
 }
+
+#[test]
+fn buffered_package_reads_still_reject_a_bad_content_checksum() {
+    let (dir, good) = convert(&table("CRC", &row(&cell("ok"))), ValueMode::SavedText);
+    assert_eq!(records(&good, 0), vec![vec!["ok"]]);
+    let source = dir.path().join("source.ods");
+    let mut bytes = fs::read(&source).unwrap();
+    // content.xml is the helper's final member. Change only its central-directory CRC field.
+    let entry = bytes
+        .windows(4)
+        .rposition(|window| window == b"PK\x01\x02")
+        .unwrap();
+    bytes[entry + 16] ^= 1;
+    fs::write(&source, bytes).unwrap();
+    let destination = dir.path().join("invalid-crc");
+    assert!(
+        export(
+            &source,
+            &Options {
+                output: Some(destination.clone()),
+                ..Options::default()
+            }
+        )
+        .is_err()
+    );
+    assert!(!destination.exists());
+}
