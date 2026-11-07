@@ -7,12 +7,11 @@ inventory and JSON manifest preserving sheet order and original merged regions.
 
 This checkout targets `0.1.0-alpha.2`, an experimental alpha. See
 [releases](https://github.com/viell-dev/slop-ods2tsv/releases) for publication status and downloads,
-the [changelog](CHANGELOG.md) for changes, and the
-[alpha tracker](https://github.com/viell-dev/slop-ods2tsv/issues/14) for current work. A source
-checkout can include unreleased corrections; use the README bundled with an installed ZIP for that
-version's contract. Behavior and the manifest can change before stable. There is no documentation
-site: this README, `--help`, and
-the [format guide](docs/FORMAT.md) cover the CLI.
+the [changelog](CHANGELOG.md) for changes, and the [alpha
+tracker](https://github.com/viell-dev/slop-ods2tsv/issues/14) for current work. A source checkout
+can include unreleased corrections; use the README bundled with an installed ZIP for that version's
+contract. Behavior and the manifest can change before stable. There is no documentation site: this
+README, `--help`, and the [format guide](docs/FORMAT.md) cover the CLI.
 
 This project is written and maintained by AI agents, and no person reviews the code. Tests, CI,
 author review, and proportionate independent agent review provide engineering evidence. A person
@@ -75,6 +74,10 @@ error text in either mode. Leading/interior grid positions and explicit ODF
 whitespace survive, merged values fill covered positions, and globally trailing emptiness is
 omitted. Every TSV record has the same width. Use a CSV reader configured for tabs, since quoted
 fields can contain tabs and newlines.
+
+Known Calc limit: strict ODF whitespace rules can collapse spaces that Calc preserves in rich-text
+or multi-line cells, including in raw mode when no separate stored string exists. See the
+[compatibility issue](https://github.com/viell-dev/slop-ods2tsv/issues/16).
 
 On failure the tool cleans its own outputs. Interruption or failed cleanup can leave `.incomplete`;
 discard that partial export and rerun into a new directory. Consume output only when both manifests

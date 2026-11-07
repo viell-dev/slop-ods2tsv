@@ -10,6 +10,9 @@ Buffer decompressed ODS input, add a packaged correctness benchmark, handle clos
 without panicking, and write LF-only checksums on all platforms. Expand real LibreOffice saved/raw,
 formula, whitespace and repeat coverage. [Review and release evidence](https://github.com/viell-dev/slop-ods2tsv/issues/14).
 Total output bytes and XML nesting remain [known limits](https://github.com/viell-dev/slop-ods2tsv/issues/9).
+Strict ODF whitespace collapsing can still lose spaces that Calc preserves in rich-text/multi-line
+cells; this [compatibility limit](https://github.com/viell-dev/slop-ods2tsv/issues/16) is now disclosed
+and covered by real-application checks.
 
 ## 0.1.0-alpha.1
 
