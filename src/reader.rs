@@ -184,6 +184,7 @@ pub(crate) fn read(
     let mut column = 0usize;
     let mut skip = 0usize;
     let mut spreadsheet = false;
+    let mut sheet_count = 0usize;
     let mut end_document = false;
     for event in parser {
         match event? {
@@ -194,14 +195,14 @@ pub(crate) fn read(
                     if !(is(&name, OFFICE, "document") || is(&name, OFFICE, "document-content")) {
                         return Err(invalid("input is not an OpenDocument spreadsheet"));
                     }
-                    if let Some(mime) = attr(&attributes, OFFICE, "mimetype") {
-                        if !matches!(
+                    if let Some(mime) = attr(&attributes, OFFICE, "mimetype")
+                        && !matches!(
                             mime,
                             "application/vnd.oasis.opendocument.spreadsheet"
                                 | "application/vnd.oasis.opendocument.spreadsheet-template"
-                        ) {
-                            return Err(invalid("input declares a non-spreadsheet document type"));
-                        }
+                        )
+                    {
+                        return Err(invalid("input declares a non-spreadsheet document type"));
                     }
                 }
                 if skip > 0 {
@@ -238,6 +239,7 @@ pub(crate) fn read(
                         rows: vec![],
                     });
                     row_index = 0;
+                    sheet_count += 1;
                 } else if sheet.is_some()
                     && is(&name, TABLE, "table-row")
                     && row.is_none()
@@ -325,7 +327,7 @@ pub(crate) fn read(
             _ => {}
         }
     }
-    if !spreadsheet || !end_document || !stack.is_empty() {
+    if !spreadsheet || sheet_count == 0 || !end_document || !stack.is_empty() {
         return Err(invalid("input has no complete spreadsheet body"));
     }
     Ok(())

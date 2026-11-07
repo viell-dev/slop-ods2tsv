@@ -44,17 +44,17 @@ impl Source {
             .starts_with(b"PK");
         let kind = if zip {
             let mut archive = ZipArchive::new(reader)?;
-            if let Some(bytes) = metadata(&mut archive, "mimetype", 1024)? {
-                if !spreadsheet_type(&String::from_utf8_lossy(&bytes)) {
-                    return Err(invalid("package declares a non-spreadsheet document type"));
-                }
+            if let Some(bytes) = metadata(&mut archive, "mimetype", 1024)?
+                && !spreadsheet_type(&String::from_utf8_lossy(&bytes))
+            {
+                return Err(invalid("package declares a non-spreadsheet document type"));
             }
-            if let Some(manifest) = metadata(&mut archive, "META-INF/manifest.xml", 1024 * 1024)? {
-                if encrypted_content(&manifest) {
-                    return Err(invalid(
-                        "content.xml is encrypted; save an unencrypted copy before exporting",
-                    ));
-                }
+            if let Some(manifest) = metadata(&mut archive, "META-INF/manifest.xml", 1024 * 1024)?
+                && encrypted_content(&manifest)
+            {
+                return Err(invalid(
+                    "content.xml is encrypted; save an unencrypted copy before exporting",
+                ));
             }
             Kind::Package(archive)
         } else {
@@ -188,5 +188,25 @@ impl<R: Read> Read for Limited<R> {
         let read = self.inner.read(&mut buffer[..length])?;
         self.remaining -= read as u64;
         Ok(read)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn byte_limit_allows_exact_eof_and_rejects_additional_data() {
+        let mut exact = Limited {
+            inner: &b"abc"[..],
+            remaining: 3,
+        };
+        let mut bytes = Vec::new();
+        exact.read_to_end(&mut bytes).unwrap();
+        assert_eq!(bytes, b"abc");
+        let mut excessive = Limited {
+            inner: &b"abcd"[..],
+            remaining: 3,
+        };
+        assert!(excessive.read_to_end(&mut Vec::new()).is_err());
     }
 }
