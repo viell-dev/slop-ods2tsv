@@ -1,0 +1,52 @@
+use clap::Parser;
+use ods2tsv::{Options, ValueMode};
+use std::{path::PathBuf, process::ExitCode};
+
+/// Export saved ODS/FODS sheet values to TSV with ordered workbook manifests.
+#[derive(Parser)]
+#[command(
+    version,
+    term_width = 100,
+    after_help = "Exports every sheet, including hidden and empty sheets. Preserves original coordinates and fills merged cells. Formulas use saved results; they are never recalculated.\n\nOutput: one TSV per sheet, manifest.txt, and manifest.json (including original merged ranges). The destination must be new. Without --output, creates a fresh timestamped directory in the current working directory.\n\nLimits: 64 MiB content XML, 10,000,000 rectangular fields per sheet, 1 MiB per cell, 100,000 merged regions per sheet. Encrypted workbook content is unsupported."
+)]
+struct Args {
+    /// Input OpenDocument spreadsheet (ZIP package or flat XML, detected by content)
+    file: PathBuf,
+    /// Prefer stored values (unlocalized numbers, ISO dates) over saved paragraph text
+    #[arg(short, long)]
+    raw: bool,
+    /// Create this new output directory instead of a timestamped directory
+    #[arg(short, long, value_name = "DIR")]
+    output: Option<PathBuf>,
+}
+
+fn main() -> ExitCode {
+    let args = Args::parse();
+    let options = Options {
+        output: args.output,
+        values: if args.raw {
+            ValueMode::Raw
+        } else {
+            ValueMode::SavedText
+        },
+    };
+    match ods2tsv::export(&args.file, &options) {
+        Ok(export) => {
+            for sheet in &export.manifest.sheets {
+                for warning in &sheet.warnings {
+                    eprintln!(
+                        "warning: {:?}: {} ({})",
+                        sheet.name, warning.message, warning.count
+                    );
+                }
+            }
+            eprintln!("Exported {} sheets.", export.manifest.sheets.len());
+            println!("{}", export.directory.display());
+            ExitCode::SUCCESS
+        }
+        Err(error) => {
+            eprintln!("error: {}: {error}", args.file.display());
+            ExitCode::FAILURE
+        }
+    }
+}
