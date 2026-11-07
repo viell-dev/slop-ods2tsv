@@ -23,11 +23,23 @@ def main():
         directory = Path(directory)
         with zipfile.ZipFile(archive) as package:
             assert name in package.namelist()
+            required = {"THIRD_PARTY_NOTICES.txt", "licenses/README.md",
+                        "licenses/rust/COPYRIGHT-library.html", "licenses/rust/licenses/MIT.txt",
+                        "licenses/rust/licenses/Apache-2.0.txt", "README.md", "COPYING.md",
+                        "CHANGELOG.md", "CONTRIBUTING.md", "RELEASING.md", "SECURITY.md",
+                        "CODE_OF_CONDUCT.md", "docs/FORMAT.md", "manifest.schema.json",
+                        "examples/workbook.fods", ".github/labels.json"}
+            if os.name != "nt":
+                required.add("licenses/musl-1.2.5.COPYRIGHT")
+            assert required <= set(package.namelist()), "Missing dependency/runtime license inventory"
+            assert b"Copyright notices for The Rust Standard Library" in package.read("licenses/rust/COPYRIGHT-library.html")
             assert len(package.namelist()) == len(set(package.namelist()))
             for entry in package.infolist():
                 assert not Path(entry.filename).is_absolute() and ".." not in Path(entry.filename).parts
                 if entry.filename == "THIRD_PARTY_NOTICES.txt":
                     assert package.read(entry).startswith(b"Third-party notices for this target")
+                elif entry.filename.startswith("licenses/rust/"):
+                    assert package.read(entry).strip(), "Empty Rust runtime notice"
                 elif entry.filename != name:
                     assert package.read(entry) == (ROOT / entry.filename).read_bytes(), entry.filename
             if os.name == "nt":

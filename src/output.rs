@@ -203,13 +203,13 @@ impl Run {
             },
             sheets: std::mem::take(&mut self.sheets),
         };
-        let mut json = self.file("manifest.json")?;
+        let mut json = BufWriter::new(self.file("manifest.json")?);
         serde_json::to_writer_pretty(&mut json, &manifest)?;
         json.write_all(b"\n")
             .map_err(|error| io("writing JSON manifest", error))?;
         json.flush()
             .map_err(|error| io("flushing JSON manifest", error))?;
-        let mut text = self.file("manifest.txt")?;
+        let mut text = BufWriter::new(self.file("manifest.txt")?);
         text.write_all(manifest.text().as_bytes())
             .map_err(|error| io("writing text manifest", error))?;
         text.flush()

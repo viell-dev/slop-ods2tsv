@@ -27,6 +27,10 @@ child process, not global settings. ZIPs contain the executable, public Markdown
 files, and Linux executable permissions; each has a SHA-256 file. Archives are not overwritten:
 start a new local build with a fresh `dist/`.
 
+Include Cargo dependency texts, the pinned Rust standard-library inventory/license texts and target
+runtime notices described in [licenses/README.md](licenses/README.md). Updating Rust requires review
+of the linked musl version and notices; Cargo's graph does not describe the standard library.
+
 Run `python scripts/artifact.py <ZIP>` on the target OS. It verifies hashes, contents, extraction
 permissions and the installed executable's CLI/TSV/manifest corpus. Windows inspection rejects
 non-system DLL imports and runs with only System32 on PATH. This runs on a hosted Windows runner,

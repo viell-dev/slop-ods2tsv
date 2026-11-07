@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 import tomllib
 import zipfile
-from licenses import notices
+from licenses import notices, runtime_files
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -32,7 +32,7 @@ def main():
         raise FileExistsError(f"Refusing to replace {archive}; use a fresh dist directory")
     notice_path = dist / f"{args.target}-THIRD_PARTY_NOTICES.txt"
     notice_path.write_text(notices(args.target), encoding="utf-8", newline="\n")
-    files = [(binary_name, binary), ("THIRD_PARTY_NOTICES.txt", notice_path)] + [(name, ROOT / name) for name in (
+    files = [(binary_name, binary), ("THIRD_PARTY_NOTICES.txt", notice_path), *runtime_files(args.target)] + [(name, ROOT / name) for name in (
         "README.md", "COPYING.md", "CHANGELOG.md", "CONTRIBUTING.md", "RELEASING.md", "SECURITY.md",
         "docs/FORMAT.md", "manifest.schema.json", "examples/workbook.fods", "CODE_OF_CONDUCT.md", ".github/labels.json",
     )]
