@@ -104,6 +104,7 @@ Failure to report the completed directory on stdout returns exit 1 and leaves th
 intact. This reporting failure does not roll back an otherwise successful export.
 
 Read, decompression, checksum and content-byte-limit failures report a workbook read error. XML
-syntax errors retain the parser's line/column. Input is parsed once; these diagnostics do not add
-a separate pre-validation pass. Resource limits and cleanup also apply to ignored XML and output
+syntax errors retain the parser's line/column. Character-decoding failures omit a position when
+the decoder cannot supply one. Input is parsed once; these diagnostics do not add a separate
+pre-validation pass. Resource limits and cleanup also apply to ignored XML and output
 expansion; see [the README](../README.md#scope-and-limits) for the fixed alpha caps.

@@ -135,6 +135,9 @@ up owned output. Huge empty repeated tails stay compact. A distant populated cel
 large output. These fixed alpha guardrails do not guarantee a CPU/RAM ceiling or that every input
 near them fits every computer. Ignored image/annotation content uses the whole-input budget, rather
 than the smaller cell-text budget. Package-manifest inspection also enforces the nesting cap.
+Retained merged ranges reserve a minimum JSON byte cost while sheets are processed, so excessive
+cross-sheet metadata fails before the final manifest write. Actual encoded files still determine
+the exact output-byte limit; reservations are not charged twice.
 
 Calculation, styles, charts, annotations, nested tables, tracked history, decryption, Excel formats
 and a GUI are outside scope. TSV and this manifest do not form a lossless workbook archive.

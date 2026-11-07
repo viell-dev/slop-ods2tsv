@@ -8,13 +8,17 @@ choice with an additive schema-1 field; real Calc save/re-read checks cover both
 
 Retain meaningful cached-error paragraphs or a non-whitespace attribute fallback; warn for error
 formulas whose only saved text is whitespace. Keep read/checksum/budget failures distinct from
-positioned XML syntax errors without a second validation pass.
+positioned XML syntax errors without a second validation pass. Character-decoding failures omit
+unknown positions rather than displaying a fabricated `1:1`.
 
 Cap XML at 256 open elements and combined TSV/manifest output at 256 MiB per export, including
-encoded quoting and separators. Prune empty source templates and cache non-empty repeated-row
-cells. Add actual-limit cleanup tests and a repeated-empty benchmark. These caps remain guardrails,
+encoded quoting and separators. Reserve a minimum JSON byte cost for retained merged ranges
+during sheet processing, then count actual manifest writes without double charging. Prune empty
+source templates and cache non-empty repeated-row cells. Add actual-limit cleanup tests and a
+repeated-empty benchmark. These caps remain guardrails,
 not fixed CPU/RAM guarantees. Windows/Linux portable ZIPs remain the installation path.
 [Review and release evidence](https://github.com/viell-dev/slop-ods2tsv/issues/19).
+[Human installation/use request before stable](https://github.com/viell-dev/slop-ods2tsv/issues/22).
 
 ## 0.1.0-alpha.2
 

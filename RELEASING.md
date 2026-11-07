@@ -3,9 +3,11 @@
 ## Readiness
 
 `Cargo.toml` owns the SemVer version, without a `v` prefix. Alpha/beta/RC versions are GitHub
-prereleases. The initial version is `0.1.0-alpha.1`; a stable scope agreement and human usability
-report are still required before stable. The tracker and preparation PR retain scope, exact commit,
-checks/results, benchmark method, platform evidence, review findings and remaining limits.
+prereleases. [The first stable scope proposal](https://github.com/viell-dev/slop-ods2tsv/issues/21)
+and a [human usability report](https://github.com/viell-dev/slop-ods2tsv/issues/22) are still pending;
+they block leaving alpha/stable publication, not routine maintenance alphas. The tracker and
+preparation PR retain scope, exact commit, checks/results, benchmark method, platform evidence,
+review findings and remaining limits.
 Each version's changelog entry links its own tracker; that entry becomes its release notes.
 
 Every release PR gets independent agent review of all changes since the previous release, plus
