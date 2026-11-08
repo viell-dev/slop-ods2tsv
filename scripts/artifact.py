@@ -39,6 +39,10 @@ def main():
             application_license = package.read("LICENSE").decode("utf-8").replace("\r\n", "\n")
             assert application_license.startswith("MIT License\n\nCopyright (c) 2026 viell\n")
             assert "Permission is hereby granted, free of charge" in application_license
+            license_words = " ".join(application_license.split())
+            assert "The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software." in license_words
+            assert 'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED' in license_words
+            assert "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE." in license_words
             assert b"Copyright notices for The Rust Standard Library" in package.read("licenses/rust/COPYRIGHT-library.html")
             assert len(package.namelist()) == len(set(package.namelist()))
             for entry in package.infolist():
