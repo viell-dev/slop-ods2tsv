@@ -5,13 +5,15 @@ inventory and JSON manifest preserving sheet order and original merged regions.
 
 ## Status
 
-This checkout targets `0.1.0-alpha.5`, an experimental alpha. See
+This checkout targets `0.1.0-beta.1`, the first feature-complete beta. See
 [releases](https://github.com/viell-dev/slop-ods2tsv/releases) for publication status and downloads,
-the [changelog](CHANGELOG.md) for changes, and the [alpha
-tracker](https://github.com/viell-dev/slop-ods2tsv/issues/35) for current work. A source checkout
+the [changelog](CHANGELOG.md) for changes, and the [release
+tracker](https://github.com/viell-dev/slop-ods2tsv/issues/37) for current work. A source checkout
 can include unreleased corrections; use `README.txt` bundled with an installed ZIP for that version's
-contract. Behavior and the manifest can change before stable. There is no documentation site: this
-README, `--help`, and the [format guide](docs/FORMAT.md) cover the CLI.
+contract. Behavior and the manifest can change before stable; beta work focuses on fixes and polish.
+The [stable goal](https://github.com/viell-dev/slop-ods2tsv/issues/21) is agreed and the current
+[human usability feedback](https://github.com/viell-dev/slop-ods2tsv/issues/22) is handled. There is
+no documentation site: this README, `--help`, and the [format guide](docs/FORMAT.md) cover the CLI.
 
 This project is written and maintained by AI agents, and no person reviews the code. Tests, CI,
 author review, and proportionate independent agent review provide engineering evidence. A person
@@ -36,7 +38,7 @@ executable when it is not running. Keep the previous binary for rollback. Remove
 files and any PATH entry to uninstall; exported data is not removed.
 
 CI executes Windows binaries on hosted Windows runners and Linux musl binaries on Ubuntu and
-Alpine. Other architectures are not verified. Windows alpha executables are unsigned: device
+Alpine. Other architectures are not verified. Windows executables are unsigned: device
 Application Control can block them. Do not bypass security policy; report the exact policy error
 or use an environment that permits execution. Hosted CI cannot establish a managed laptop's policy.
 
@@ -151,13 +153,13 @@ are accepted. UTF-8, UTF-16 LE/BE, and ISO-8859-1 XML are tested. At least one s
 empty sheets have zero-byte TSVs and zero dimensions. Hidden rows and columns remain data positions;
 visibility styles are not resolved into metadata.
 
-The alpha limits decompressed content XML to 64 MiB, XML to 256 open elements, cell text to 1 MiB,
+The fixed limits cap decompressed content XML at 64 MiB, XML at 256 open elements, cell text at 1 MiB,
 each sheet's rectangular output to 10,000,000 fields, and each sheet to 100,000 merged regions.
 All TSVs and both manifests together may contain at most 256 MiB of encoded bytes per export;
 quoting, separators and record endings count. The temporary incomplete marker is outside that
 count. Overflow, invalid counts, overlapping merges and exceeded limits fail explicitly and clean
 up owned output. Huge empty repeated tails stay compact. A distant populated cell can still require
-large output. These fixed alpha guardrails do not guarantee a CPU/RAM ceiling or that every input
+large output. These fixed guardrails do not guarantee a CPU/RAM ceiling or that every input
 near them fits every computer. Ignored image/annotation content uses the whole-input budget, rather
 than the smaller cell-text budget. Package-manifest inspection also enforces the nesting cap.
 Retained merged ranges reserve a minimum JSON byte cost while sheets are processed, so excessive
@@ -166,6 +168,9 @@ the exact output-byte limit; reservations are not charged twice.
 
 Calculation, styles, charts, annotations, nested tables, tracked history, decryption, Excel formats
 and a GUI are outside scope. TSV and this manifest do not form a lossless workbook archive.
+Exclusions are not promised future goals. Every proposed feature or distribution addition must be
+weighed against project scope, concrete benefit and ongoing maintenance/support effort before
+acceptance.
 
 ## Development reporting and provenance
 

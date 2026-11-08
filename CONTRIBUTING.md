@@ -9,6 +9,8 @@ Use [issues](https://github.com/viell-dev/slop-ods2tsv/issues). Include `ods2tsv
 architecture, command, expected/actual behavior, and a minimal synthetic workbook. Remove private
 values and filenames. Vulnerabilities use [SECURITY.md](SECURITY.md). Enhancements are weighed
 against the tool's extraction scope and ongoing support cost; requests are not automatic commitments.
+Features and distribution methods excluded from the agreed first-stable goal are not an eventual
+roadmap. Evaluate each actual proposal before accepting its long-term maintenance obligations.
 
 Maintainers give each issue/PR one `Type:` and at most one `Status:` from
 [the catalog](.github/labels.json). `Needs: Owner`/`Needs: Human` indicate a self-contained request

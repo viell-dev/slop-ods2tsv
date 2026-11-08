@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.0-beta.1
+
+Enter beta against the agreed first-stable scope after the alpha.5 usability corrections and
+focused human feedback. The agreed CLI features are complete; work now focuses on fixes and polish.
+Extraction behavior, options, limits, dependency versions and manifest schema 1 are unchanged.
+Schema selectors and portable-guide references identify this release tag.
+
+Clarify that excluded features and distribution methods are not future commitments. Each proposed
+addition must justify its scope and maintenance/support cost. Retain portable Windows/Linux ZIPs.
+This release makes no performance-fix claim; the non-reproduced timing observation retains its
+evidence and limitations in the linked investigation.
+[Goal agreement](https://github.com/viell-dev/slop-ods2tsv/issues/21),
+[completed human feedback](https://github.com/viell-dev/slop-ods2tsv/issues/22),
+[timing investigation](https://github.com/viell-dev/slop-ods2tsv/issues/26),
+[review and release evidence](https://github.com/viell-dev/slop-ods2tsv/issues/37).
+
 ## 0.1.0-alpha.5
 
 Make export completion identify the sheet count and destination on stdout. Warnings stay on stderr.
