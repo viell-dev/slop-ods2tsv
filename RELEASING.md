@@ -4,8 +4,10 @@
 
 `Cargo.toml` owns the SemVer version, without a `v` prefix. Alpha/beta/RC versions are GitHub
 prereleases. [The first stable scope proposal](https://github.com/viell-dev/slop-ods2tsv/issues/21)
-and a [human usability report](https://github.com/viell-dev/slop-ods2tsv/issues/22) are still pending;
-they block leaving alpha/stable publication, not routine maintenance alphas. The tracker and
+is still pending. A [human usability report](https://github.com/viell-dev/slop-ods2tsv/issues/22)
+was received for alpha.3; alpha.5 addresses its findings and needs focused feedback on the changed
+workflow before stable. Scope agreement blocks leaving alpha, and unresolved human usability work
+blocks stable publication; neither blocks routine maintenance alphas. The tracker and
 preparation PR retain scope, exact commit, checks/results, benchmark method, platform evidence,
 review findings and remaining limits.
 Each version's changelog entry links its own tracker; that entry becomes its release notes.
@@ -26,8 +28,10 @@ python scripts/package.py --target x86_64-unknown-linux-musl
 
 Linux needs `musl-tools` and `rustup target add x86_64-unknown-linux-musl`; it can run in Docker
 from Windows. Windows needs its C++/SDK toolchain. Release-only static CRT flags live in the build
-child process, not global settings. ZIPs contain the executable, public Markdown/schema/license
-files, and Linux executable permissions; each has a SHA-256 file. Archives are not overwritten:
+child process, not global settings. ZIPs contain only the executable, rendered `docs/PORTABLE.txt`
+as `README.txt`, application `LICENSE`, and the complete third-party/runtime notices. The portable
+guide links to release-tagged reference/schema/examples; developer documents stay in the repository.
+Preserve Linux executable permissions; each ZIP has a SHA-256 file. Archives are not overwritten:
 start a new local build with a fresh `dist/`.
 
 Include Cargo dependency texts, the pinned Rust standard-library inventory/license texts and target
@@ -74,7 +78,9 @@ and report whether commands, feedback, output and recovery are understandable an
 after substantial interface or main-workflow changes. Routine fixes can reuse representative
 recorded evidence with an explained assessment.
 
-Prepare a direct candidate download, synthetic inputs, short numbered tasks and expected outcomes.
+Prepare a direct candidate download, optional synthetic inputs and short tasks with expected outcomes.
+Agents own scripted functional checks. Accept a person's natural-use observations without requiring
+them to follow a regression script; distinguish their usability feedback from agent-run evidence.
 Open a self-contained `Needs: Human` request assigned to the tester, or the owner to arrange one,
 naming the stable release it blocks. Link it from the tracker and PR. Record the person's actual
 report separately from maintainer dispositions. Keep it open until required coverage and resulting

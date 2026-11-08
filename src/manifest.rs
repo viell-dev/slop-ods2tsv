@@ -9,27 +9,6 @@ pub struct MergedRange {
     pub end_column: usize,
 }
 
-impl MergedRange {
-    pub(crate) fn label(&self) -> String {
-        fn column(mut number: usize) -> String {
-            let mut chars = Vec::new();
-            while number > 0 {
-                number -= 1;
-                chars.push((b'A' + (number % 26) as u8) as char);
-                number /= 26;
-            }
-            chars.iter().rev().collect()
-        }
-        format!(
-            "{}{}:{}{}",
-            column(self.start_column),
-            self.start_row,
-            column(self.end_column),
-            self.end_row
-        )
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Warning {
     pub code: String,
@@ -50,6 +29,9 @@ pub struct SheetManifest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Manifest {
+    /// Release-pinned schema selector; absent in exports before alpha.5.
+    #[serde(rename = "$schema", default, skip_serializing_if = "Option::is_none")]
+    pub schema: Option<String>,
     pub schema_version: u32,
     pub exporter: Exporter,
     pub source: Source,
@@ -111,33 +93,11 @@ impl Manifest {
         );
         for sheet in &self.sheets {
             text.push_str(&format!(
-                "{}. {} -> {} ({} rows, {} columns)\n",
+                "{}. {} -> {}\n",
                 sheet.position,
                 serde_json::to_string(&sheet.name).expect("strings serialize"),
                 serde_json::to_string(&sheet.file).expect("strings serialize"),
-                sheet.rows,
-                sheet.columns
             ));
-            if !sheet.merged_ranges.is_empty() {
-                text.push_str("   Merged ranges in original coordinates: ");
-                let labels: Vec<_> = sheet
-                    .merged_ranges
-                    .iter()
-                    .take(20)
-                    .map(MergedRange::label)
-                    .collect();
-                text.push_str(&labels.join(", "));
-                if sheet.merged_ranges.len() > 20 {
-                    text.push_str(" (complete list in manifest.json)");
-                }
-                text.push('\n');
-            }
-            for warning in &sheet.warnings {
-                text.push_str(&format!(
-                    "   Warning [{}] ({}): {}\n",
-                    warning.code, warning.count, warning.message
-                ));
-            }
         }
         text.push_str("\nMachine-readable details: manifest.json\n");
         text

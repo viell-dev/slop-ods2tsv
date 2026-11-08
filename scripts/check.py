@@ -19,7 +19,7 @@ FOOTER = '</office:spreadsheet></office:body></office:document-content>'
 
 def corpus(binary, directory):
     source = directory / "example with spaces.ods"
-    content = HEADER + '<table:table table:name="Zeta"><table:table-row><table:table-cell table:number-columns-spanned="2" office:value-type="float" office:value="7"><text:p>0007</text:p></table:table-cell><table:covered-table-cell/></table:table-row></table:table><table:table table:name="Empty"/>' + FOOTER
+    content = HEADER + '<table:table table:name="Zeta"><table:table-row><table:table-cell table:number-columns-spanned="2" office:value-type="float" office:value="7"><text:p>0007</text:p></table:table-cell><table:covered-table-cell/></table:table-row><table:table-row><table:table-cell table:formula="of:=1+1"/></table:table-row></table:table><table:table table:name="Empty"/>' + FOOTER
     with zipfile.ZipFile(source, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("content.xml", content)
     schema = json.loads((ROOT / "manifest.schema.json").read_text(encoding="utf-8"))
@@ -32,9 +32,16 @@ def corpus(binary, directory):
         if raw:
             command.insert(1, "--raw")
         process = subprocess.run(command, capture_output=True, text=True, check=True, timeout=30)
-        assert Path(process.stdout.strip()) == destination
+        assert process.stdout == f'Exported 2 sheets into "{destination}".\n'
+        assert "warning:" in process.stderr and "Exported" not in process.stderr
         manifest = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))
         validator.validate(manifest)
+        assert manifest["$schema"] == schema["$id"]
+        legacy = dict(manifest)
+        del legacy["$schema"]
+        validator.validate(legacy)
+        invalid = dict(manifest, **{"$schema": 42})
+        assert not validator.is_valid(invalid)
         assert manifest["options"]["preserve_whitespace"] is False
         assert [sheet["name"] for sheet in manifest["sheets"]] == ["Zeta", "Empty"]
         assert manifest["sheets"][0]["merged_ranges"] == [{"start_row": 1, "start_column": 1, "end_row": 1, "end_column": 2}]
@@ -42,7 +49,11 @@ def corpus(binary, directory):
             assert list(csv.reader(stream, delimiter="\t")) == [["7", "7"] if raw else ["0007", "0007"]]
         assert (destination / "Empty.tsv").read_bytes() == b""
         assert not (destination / ".incomplete").exists()
-        assert '1. "Zeta" -> "Zeta.tsv"' in (destination / "manifest.txt").read_text(encoding="utf-8")
+        assert manifest["sheets"][0]["warnings"][0]["code"] == "missing-formula-result"
+        overview = (destination / "README.txt").read_text(encoding="utf-8")
+        assert overview.split("Sheets in original workbook order:\n", 1)[1] == '1. "Zeta" -> "Zeta.tsv"\n2. "Empty" -> "Empty.tsv"\n\nMachine-readable details: manifest.json\n'
+        assert "A1:B1" not in overview and "warning:" not in overview and "missing-formula-result" not in overview
+        assert not (destination / "manifest.txt").exists()
         rerun = subprocess.run(command, capture_output=True, timeout=30)
         assert rerun.returncode == 1
         assert json.loads((destination / "manifest.json").read_text(encoding="utf-8")) == manifest
@@ -85,7 +96,7 @@ def corpus(binary, directory):
         if stream == "stdout":
             assert "export completed" in result.stderr and "could not be written" in result.stderr
         elif workbook == source:
-            assert Path(result.stdout.strip()) == destination, "Closed stderr must not suppress the completed path"
+            assert result.stdout == f'Exported 2 sheets into "{destination}".\n', "Closed stderr must not suppress completion"
     return last_manifest
 
 
@@ -96,6 +107,8 @@ def main():
     args = parser.parse_args()
     binary = args.binary.resolve()
     version = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))["package"]["version"]
+    schema = json.loads((ROOT / "manifest.schema.json").read_text(encoding="utf-8"))
+    assert schema["$id"] == f"https://raw.githubusercontent.com/viell-dev/slop-ods2tsv/{version}/manifest.schema.json"
     assert subprocess.check_output([str(binary), "--version"], text=True).strip() == "ods2tsv " + version
     help_text = subprocess.check_output([str(binary), "--help"], text=True).replace("\r\n", "\n").rstrip()
     readme_path = ROOT / "README.md"

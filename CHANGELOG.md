@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.0-alpha.5
+
+Make export completion identify the sheet count and destination on stdout. Warnings stay on stderr.
+This replaces the earlier bare-path stdout result; automation should choose `--output` and read
+`manifest.json` in that directory.
+
+Replace the exported `manifest.txt` with `README.txt`: settings and the sheet-name-to-file map in
+workbook order. Dimensions, warnings and merged ranges remain complete in JSON. Add a `$schema`
+selector pinned to this release's schema `$id`, keeping older schema-1 manifests valid.
+
+Explain whitespace policies with concrete values and XML examples; conversion behavior is unchanged.
+Check exported TSV with Calc's real text importer and save/re-read, including leading zeros,
+formula-looking strings, explicit spaces and quoted tabs/newlines. Use Text columns with formula
+evaluation and trimming disabled; this checks the text projection, not workbook types/styles.
+
+Reduce portable ZIPs to the binary, short `README.txt` and complete application/third-party licenses.
+Versioned reference/schema/examples and developer documentation stay in the repository.
+[Review and release evidence](https://github.com/viell-dev/slop-ods2tsv/issues/35).
+[Human usability feedback and follow-up](https://github.com/viell-dev/slop-ods2tsv/issues/22).
+
 ## 0.1.0-alpha.4
 
 Adopt the owner's selected MIT license for the application, including authorized prototype-derived

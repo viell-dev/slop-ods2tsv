@@ -1,6 +1,6 @@
 # Export format
 
-This describes the `0.1.0-alpha.4` source and manifest schema 1; GitHub releases determine which
+This describes the `0.1.0-alpha.5` source and manifest schema 1; GitHub releases determine which
 builds are published. CLI help is reproduced in the [README](../README.md#command-reference).
 
 ## TSV values and coordinates
@@ -38,6 +38,19 @@ paragraph separators still apply. It does not preserve indentation outside parag
 ignored subtrees. XML's own line-ending and attribute normalization still applies. Saved/raw value
 preference is unchanged, so raw attributes can take priority over the paragraphs in raw mode.
 
+Examples below show decoded cell values, with quotes marking boundaries and `\n` a line break:
+
+| Cell paragraphs | Default | Preserved |
+| --- | --- | --- |
+| `<text:p>  A  B </text:p>` | `"A B"` | `"  A  B "` |
+| `<text:p>A</text:p><text:p>  B</text:p>` | `"A\nB"` | `"A\n  B"` |
+| `<text:p>A<text:s/>B</text:p>` | `"A B"` | `"A B"` |
+| `<text:p>A<text:s/></text:p>` | `"A "` | `"A "` |
+
+Explicit ODF spaces survive both policies, including trailing spaces. The preservation option does
+not add blanket trimming or remove explicit whitespace. TSV quoting is applied after these values
+are selected; the explanatory quotes above are not a promise of quotes around every TSV field.
+
 LibreOffice 25.2.3.2 saves some rich-text/multi-line spaces literally, which Calc preserves on
 reopening. The option retains those spaces in the real-application tests; the default can still
 collapse them. Use the option for that compatibility requirement. It is explicit because literal
@@ -48,12 +61,19 @@ evidence and alternatives.
 
 ## Manifest schema 1
 
-`manifest.json` follows [manifest.schema.json](../manifest.schema.json). `manifest.txt` comes from
-the same model and uses JSON-style escaping for names. It summarizes at most 20 merged ranges per
-sheet; JSON retains the complete list within the documented limit.
+`manifest.json` follows [manifest.schema.json](../manifest.schema.json). From alpha.5 it includes
+`$schema` pointing to that schema at the exporter's release tag, matching the schema document's
+`$id`. The selector is optional for backward compatibility with earlier schema-1 exports. A new
+release may add fields without changing schema 1; consumers should ignore unknown additive fields.
+
+`README.txt` is the human overview, named `manifest.txt` before alpha.5. It comes from the same
+model and uses JSON-style escaping for names. It contains the workbook/settings header and the
+sheet-name-to-filename map in original order. Dimensions, merge details and warnings are JSON-only;
+the CLI also reports warnings to stderr.
 
 | Field | Meaning |
 | --- | --- |
+| `$schema` | Release-pinned JSON Schema URI, present from alpha.5 |
 | `schema_version` | Integer 1, independent of executable version |
 | `exporter` | Tool name and version from Cargo metadata |
 | `source` | Basename, detected container (`ods`/`fods`), original file size in bytes |

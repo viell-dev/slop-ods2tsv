@@ -11,6 +11,30 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 
+def calc_import(soffice, profile, source, expected, directory):
+    """Use Calc's real text importer; compare its saved/reopened text projection."""
+    directory.mkdir()
+    imported = directory / "imported"
+    reread = directory / "reread"
+    imported.mkdir()
+    reread.mkdir()
+    # All columns Text (format 2), no trim/special-number inference/formula evaluation.
+    # Token 13 must be present: omitting it enables formulas for legacy compatibility.
+    # https://help.libreoffice.org/latest/en-US/text/shared/guide/csv_params.html
+    columns = "/".join(f"{column}/2" for column in range(1, len(expected[0]) + 1))
+    settings = f"9,34,76,1,{columns},0,false,false,false,false,false,0,false,false,false"
+    subprocess.run([soffice, profile, "--headless", "--infilter=Text - txt - csv (StarCalc):" + settings,
+                    "--convert-to", "ods", "--outdir", str(imported), str(source)], check=True, timeout=120)
+    workbook = imported / (source.stem + ".ods")
+    assert workbook.is_file(), "Calc import did not produce an ODS"
+    subprocess.run([soffice, profile, "--headless", "--convert-to",
+                    "csv:Text - txt - csv (StarCalc):9,34,76,1,,0,false,true,true,false,false,0,false,false,false",
+                    "--outdir", str(reread), str(workbook)], check=True, timeout=120)
+    with (reread / (source.stem + ".csv")).open(encoding="utf-8-sig", newline="") as stream:
+        actual = list(csv.reader(stream, delimiter="\t"))
+    assert actual == expected, f"Calc import/re-read changed TSV values: {actual!r} != {expected!r}"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, required=True)
@@ -31,6 +55,8 @@ def main():
 <table:table-row><table:table-cell table:formula="of:=1/0" office:value-type="string" office:string-value="" calcext:value-type="error"><text:p>#DIV/0!</text:p></table:table-cell><table:table-cell table:formula="of:=NA()" office:value-type="string" office:string-value="" calcext:value-type="error"><text:p>#N/A</text:p></table:table-cell><table:table-cell table:formula="of:=&quot;&quot;" office:value-type="string" office:string-value=""><text:p/></table:table-cell></table:table-row>
 <table:table-row><table:table-cell table:formula="of:=&quot;a&quot;&amp;CHAR(9)&amp;&quot; b&quot;" office:value-type="string" office:string-value="a&#x09; b"><text:p>a<text:tab/> b</text:p></table:table-cell><table:table-cell/><table:table-cell office:value-type="string"><text:p>tail</text:p></table:table-cell></table:table-row>
 <table:table-row table:number-rows-repeated="2"><table:table-cell table:number-columns-repeated="3" office:value-type="string"><text:p>repeat</text:p></table:table-cell></table:table-row>
+<table:table-row><table:table-cell office:value-type="string"><text:p>0007</text:p></table:table-cell><table:table-cell office:value-type="string"><text:p>=1+1</text:p></table:table-cell><table:table-cell office:value-type="string"><text:p>1E3</text:p></table:table-cell></table:table-row>
+<table:table-row><table:table-cell office:value-type="string"><text:p><text:s text:c="2"/>edges<text:s text:c="2"/></text:p></table:table-cell><table:table-cell/><table:table-cell office:value-type="string"><text:p>tail</text:p></table:table-cell></table:table-row>
 </table:table><table:table table:name="Alpha"><table:table-row/></table:table></office:spreadsheet></office:body></office:document>'''
     with tempfile.TemporaryDirectory(prefix="ods2tsv libreoffice ") as temporary:
         temporary = Path(temporary)
@@ -46,7 +72,8 @@ def main():
         expected = [["M", "M", "café"], ["line1\nline2", "A\tB", '"quoted"'],
                     ["a\t b", "a  b", "a\n b"], ["a\n  b", "x  y\nz", "x  y"],
                     ["#DIV/0!", "#N/A", ""],
-                    ["a\t b", "", "tail"], *[["repeat"] * 3 for _ in range(2)]]
+                    ["a\t b", "", "tail"], *[["repeat"] * 3 for _ in range(2)],
+                    ["0007", "=1+1", "1E3"], ["  edges  ", "", "tail"]]
         with zipfile.ZipFile(ods) as package:
             tree = ET.fromstring(package.read("content.xml"))
         table_ns = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
@@ -87,7 +114,10 @@ def main():
                 assert all(not sheet["warnings"] for sheet in manifest["sheets"])
                 assert manifest["sheets"][1]["rows"] == 0
                 assert manifest["sheets"][1]["columns"] == 0
-    print("Verified FODS and LibreOffice-saved ODS in saved/raw and ODF/preserved-whitespace modes: text, errors/empty formula, repeats, coordinates, order, empty sheet and merges.")
+                calc_import(soffice, "-env:UserInstallation=" + (temporary / "import-profile").as_uri(),
+                            destination / manifest["sheets"][0]["file"], actual,
+                            temporary / f"import-{index}-{raw}-{preserve}")
+    print("Verified FODS and LibreOffice-saved ODS in all four value/whitespace modes, plus real Calc TSV import/re-read: text, quoting, errors/empty formula, repeats, coordinates, order, empty sheet and merges. Import uses Text columns with formulas and trimming disabled; it does not test UI or cell-type round trips.")
 
 
 if __name__ == "__main__":
