@@ -1,0 +1,69 @@
+ODS2TSV @VERSION@
+
+Export saved OpenDocument spreadsheet values to one TSV per sheet.
+No Rust, Python, LibreOffice, config file or administrator installation is needed.
+
+INSTALL
+Extract the ZIP anywhere you can execute files. Optionally add that directory to
+PATH. On Linux use unzip to preserve executable permissions. To update, unpack a
+verified newer release into a fresh directory; keep the previous binary to roll
+back. Delete installed files and any PATH entry to uninstall. Exports remain.
+
+USE
+Windows PowerShell:
+  .\ods2tsv.exe "C:\Data\Workbook.ods"
+  .\ods2tsv.exe --output "C:\Exports\Workbook" "C:\Data\Workbook.ods"
+Linux:
+  ./ods2tsv workbook.ods
+  ./ods2tsv --preserve-whitespace --output exported workbook.fods
+
+Use --help for all options and limits. Without --output a new timestamped folder
+is created in the current directory. An explicit output folder must be new and
+its parent must exist. Success names that folder; warnings go to stderr.
+Exit codes: 0 success, 1 operational failure, 2 invalid arguments.
+
+Each export contains:
+  README.txt     Settings and sheet-name-to-TSV mapping in original sheet order.
+  manifest.json  Full metadata: dimensions, warnings and original merged ranges.
+  *.tsv          Sheet values, including hidden and empty sheets.
+
+TSV is UTF-8, tab separated, with quoted fields for embedded tabs/newlines/quotes.
+When importing into Calc, choose tabs, double-quote text delimiter and Text for
+all columns. Disable formula evaluation and space trimming to keep text intact.
+The format is a text projection, not a lossless workbook archive.
+
+OPTIONS
+Default: use saved cell text. --raw prefers stored numbers/dates/other values.
+Formulas are never recalculated. Neither mode renders styles or formatting.
+
+Default paragraph whitespace: "  A  B " becomes "A B".
+With --preserve-whitespace: "  A  B " stays "  A  B ".
+Use that option to retain literal spaces in Calc rich-text or multi-line cells.
+Explicit ODF spaces survive both modes, including an explicitly saved trailing
+space. --raw is independent: a stored value can take priority over paragraph text.
+
+RECOVERY
+Existing output folders are never overwritten. Ordinary failure cleans up this
+run's files. If interrupted, discard a folder containing .incomplete and rerun
+into a new folder. Use an export only when both manifests exist and .incomplete
+is absent. A failed final stdout write leaves the completed export intact.
+Encrypted workbooks need an unencrypted saved copy. Try a shorter destination
+for path-length errors. Windows alpha binaries are unsigned; report device policy
+blocks without bypassing Application Control.
+
+REFERENCE AND REPORTS
+Versioned format guide:
+https://github.com/viell-dev/slop-ods2tsv/blob/@VERSION@/docs/FORMAT.md
+JSON schema:
+https://raw.githubusercontent.com/viell-dev/slop-ods2tsv/@VERSION@/manifest.schema.json
+Examples:
+https://github.com/viell-dev/slop-ods2tsv/tree/@VERSION@/examples
+Downloads and release notes:
+https://github.com/viell-dev/slop-ods2tsv/releases
+Report problems with --version, OS, command and a safe synthetic example:
+https://github.com/viell-dev/slop-ods2tsv/issues
+For sensitive security reports use the repository's Security tab.
+
+Experimental alpha; behavior and manifests can change before stable. This project
+is maintained by AI agents. MIT license: see LICENSE. Separate third-party terms
+are in THIRD_PARTY_NOTICES.txt and licenses/.

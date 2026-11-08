@@ -195,11 +195,10 @@ fn merges_fill_spilled_rows_and_metadata_keeps_empty_outlying_merges() {
         ),
         (5, 4, 6, 5)
     );
-    assert!(
-        fs::read_to_string(output.directory.join("manifest.txt"))
-            .unwrap()
-            .contains("D5:E6")
-    );
+    let overview = fs::read_to_string(output.directory.join("README.txt")).unwrap();
+    assert!(overview.contains("1. \"Merged\" -> \"Merged.tsv\"\n"));
+    assert!(!overview.contains("D5:E6"));
+    assert!(!overview.contains("3 rows"));
 }
 
 #[test]
@@ -413,7 +412,14 @@ fn cli_reports_exit_codes_and_fresh_default_directories() {
             .output()
             .unwrap();
         assert!(result.status.success());
-        let path = String::from_utf8(result.stdout).unwrap().trim().to_owned();
+        let message = String::from_utf8(result.stdout).unwrap();
+        let path = message
+            .strip_prefix("Exported 1 sheet into \"")
+            .unwrap()
+            .strip_suffix("\".\n")
+            .unwrap()
+            .to_owned();
+        assert!(result.stderr.is_empty());
         assert!(dir.path().join(&path).join("manifest.json").is_file());
         destinations.push(path);
     }
@@ -680,18 +686,23 @@ fn literal_whitespace_is_opt_in_independent_of_value_mode_and_recorded() {
             assert_eq!(records(&output, 0), vec![vec![expected]]);
             assert_eq!(output.manifest.options.preserve_whitespace, preserve);
             let mut legacy = serde_json::to_value(&output.manifest).unwrap();
+            assert_eq!(
+                legacy["$schema"],
+                format!(
+                    "https://raw.githubusercontent.com/viell-dev/slop-ods2tsv/{}/manifest.schema.json",
+                    env!("CARGO_PKG_VERSION")
+                )
+            );
+            legacy.as_object_mut().unwrap().remove("$schema");
             legacy["options"]
                 .as_object_mut()
                 .unwrap()
                 .remove("preserve_whitespace");
+            let legacy = serde_json::from_value::<Manifest>(legacy).unwrap();
+            assert!(!legacy.options.preserve_whitespace);
+            assert!(legacy.schema.is_none());
             assert!(
-                !serde_json::from_value::<Manifest>(legacy)
-                    .unwrap()
-                    .options
-                    .preserve_whitespace
-            );
-            assert!(
-                fs::read_to_string(output.directory.join("manifest.txt"))
+                fs::read_to_string(output.directory.join("README.txt"))
                     .unwrap()
                     .contains(if preserve {
                         "Paragraph whitespace: preserved"

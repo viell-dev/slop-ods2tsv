@@ -215,6 +215,10 @@ impl Run {
         options: &Options,
     ) -> Result<Export, Error> {
         let manifest = Manifest {
+            schema: Some(format!(
+                "https://raw.githubusercontent.com/viell-dev/slop-ods2tsv/{}/manifest.schema.json",
+                env!("CARGO_PKG_VERSION")
+            )),
             schema_version: 1,
             exporter: Exporter {
                 name: "ods2tsv".into(),
@@ -263,7 +267,7 @@ impl Run {
             .map_err(|error| io("flushing JSON manifest", error))?;
         drop(json);
         let mut text = BufWriter::new(LimitedWriter {
-            inner: self.file("manifest.txt")?,
+            inner: self.file("README.txt")?,
             remaining: &mut self.remaining,
         });
         text.write_all(manifest.text().as_bytes())
@@ -472,7 +476,7 @@ mod tests {
                         .len()
                         > 0
                 );
-                assert!(run.directory.join("manifest.txt").exists());
+                assert!(run.directory.join("README.txt").exists());
             }
             assert!(
                 error.to_string().contains("total TSV/manifest bytes"),

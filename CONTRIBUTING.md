@@ -63,9 +63,13 @@ synthetic FODS workbook to ODS in a disposable profile and verifies both. No pri
 installed user profile is touched. Linux CI runs it for extraction changes and releases. Artifact
 checks and platform dependencies are described in [RELEASING.md](RELEASING.md).
 The suite checks saved/raw and collapsed/preserved-whitespace modes, explicit whitespace, cached
-errors and valid empty formulas, repeats and geometry. When a producer rewrites cell XML, inspect
-that representation and apply the documented extraction contract; do not assume round-trip source
-text and serialized text are equal.
+errors and valid empty formulas, repeats and geometry. It also imports each non-empty exported TSV
+through Calc's real text importer, saves ODS, reopens and compares the text values. All columns use
+Text format; formula evaluation, number inference and space trimming are disabled. Leading zeros,
+formula-looking strings, Unicode and quoted tabs/newlines are covered. This is headless importer
+evidence, not human UI testing or a workbook type/style round trip. When a producer rewrites cell XML,
+inspect that representation and apply the documented extraction contract; do not assume round-trip
+source text and serialized text are equal.
 The repeated-empty benchmark measures source-template scanning separately from necessary output
 work. Deterministic tests enforce nesting/output-byte boundaries and cleanup; timings remain
 observations rather than shared-runner speed gates.

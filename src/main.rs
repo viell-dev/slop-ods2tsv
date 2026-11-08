@@ -13,7 +13,7 @@ use std::{
     bin_name = "ods2tsv",
     version,
     term_width = 100,
-    after_help = "Exports every sheet, including hidden and empty sheets. Preserves original coordinates and fills merged cells. Formulas use saved results; they are never recalculated.\n\nOutput: one TSV per sheet, manifest.txt, and manifest.json (including original merged ranges). The destination must be new. Without --output, creates a fresh timestamped directory in the current working directory.\n\nLimits: 64 MiB content XML, 256 open XML elements, 256 MiB total TSV/manifest bytes, 10,000,000 rectangular fields per sheet, 1 MiB per cell, 100,000 merged regions per sheet. Encrypted workbook content is unsupported."
+    after_help = "Exports every sheet, including hidden and empty sheets. Preserves original coordinates and fills merged cells. Formulas use saved results; they are never recalculated.\n\nOutput: one TSV per sheet, README.txt (settings and sheet map), and manifest.json (full metadata, including original merged ranges). The destination must be new. Without --output, creates a fresh timestamped directory in the current working directory. Success prints a completion message naming that directory; warnings go to stderr.\n\nWhitespace: literal paragraph text \"  A  B \" becomes \"A B\" by default; --preserve-whitespace keeps \"  A  B \". Explicit ODF spaces survive both modes. --raw independently prefers stored values over paragraphs.\n\nLimits: 64 MiB content XML, 256 open XML elements, 256 MiB total TSV/manifest bytes, 10,000,000 rectangular fields per sheet, 1 MiB per cell, 100,000 merged regions per sheet. Encrypted workbook content is unsupported."
 )]
 struct Args {
     /// Input OpenDocument spreadsheet (ZIP package or flat XML, detected by content)
@@ -42,6 +42,7 @@ fn main() -> ExitCode {
     };
     match ods2tsv::export(&args.file, &options) {
         Ok(export) => {
+            let count = export.manifest.sheets.len();
             for sheet in &export.manifest.sheets {
                 for warning in &sheet.warnings {
                     let _ = writeln!(
@@ -53,15 +54,15 @@ fn main() -> ExitCode {
                     );
                 }
             }
-            let _ = writeln!(
-                io::stderr().lock(),
-                "Exported {} sheets.",
-                export.manifest.sheets.len()
-            );
-            if let Err(error) = writeln!(io::stdout().lock(), "{}", export.directory.display()) {
+            if let Err(error) = writeln!(
+                io::stdout().lock(),
+                "Exported {count} sheet{} into \"{}\".",
+                if count == 1 { "" } else { "s" },
+                export.directory.display()
+            ) {
                 let _ = writeln!(
                     io::stderr().lock(),
-                    "error: export completed at {}, but its path could not be written to stdout: {error}",
+                    "error: export completed at {}, but its completion message could not be written to stdout: {error}",
                     export.directory.display()
                 );
                 return ExitCode::FAILURE;

@@ -5,11 +5,11 @@ inventory and JSON manifest preserving sheet order and original merged regions.
 
 ## Status
 
-This checkout targets `0.1.0-alpha.4`, an experimental alpha. See
+This checkout targets `0.1.0-alpha.5`, an experimental alpha. See
 [releases](https://github.com/viell-dev/slop-ods2tsv/releases) for publication status and downloads,
 the [changelog](CHANGELOG.md) for changes, and the [alpha
-tracker](https://github.com/viell-dev/slop-ods2tsv/issues/25) for current work. A source checkout
-can include unreleased corrections; use the README bundled with an installed ZIP for that version's
+tracker](https://github.com/viell-dev/slop-ods2tsv/issues/35) for current work. A source checkout
+can include unreleased corrections; use `README.txt` bundled with an installed ZIP for that version's
 contract. Behavior and the manifest can change before stable. There is no documentation site: this
 README, `--help`, and the [format guide](docs/FORMAT.md) cover the CLI.
 
@@ -57,20 +57,22 @@ Linux:
 ./ods2tsv --preserve-whitespace --output calc-export workbook.ods
 ```
 
-The ZIP includes [examples/workbook.fods](examples/workbook.fods) for sheet order/merges and
+The repository provides [examples/workbook.fods](examples/workbook.fods) for sheet order/merges and
 [examples/text-options.fods](examples/text-options.fods) for literal spaces, saved/raw numbers and
 a cached formula error. Try them with the same commands in a writable directory.
 
 Without `--output`, creates a fresh timestamped directory under the current working directory.
 An explicit destination must be new and its parent must exist. Existing exports are never reused.
-On success stdout contains the completed directory path; progress and warnings use stderr. Exit
-codes: 0 success, 1 operational failure, 2 invalid arguments. If writing the final directory path
-to stdout fails, exit 1 leaves the completed export intact; stderr diagnostics are best-effort.
+On success stdout says `Exported 2 sheets into "exported".` with the sheet count and destination;
+warnings use stderr. Exit codes: 0 success, 1 operational failure, 2 invalid arguments. If writing
+the final completion message to stdout fails, exit 1 leaves the completed export intact; stderr
+diagnostics are best-effort.
 
-Output contains a unique portable `.tsv` per sheet, `manifest.txt`, and `manifest.json`. All sheets
+Output contains a unique portable `.tsv` per sheet, `README.txt`, and `manifest.json`. All sheets
 are included in source order, including hidden and empty sheets. Use the manifest for order and
-the mapping from original names to filenames. JSON includes dimensions, settings, structured
-warnings, and all original merged ranges; see the [guide](docs/FORMAT.md) and
+the mapping from original names to filenames. `README.txt` shows settings and that ordered map.
+JSON includes dimensions, settings, structured warnings, and all original merged ranges, with a
+`$schema` link pinned to the exporter release; see the [guide](docs/FORMAT.md) and
 [schema](manifest.schema.json).
 
 Saved cell paragraphs are the default; `--raw` prefers stored unlocalized values. Neither mode
@@ -80,11 +82,32 @@ whitespace survive, merged values fill covered positions, and globally trailing 
 omitted. Every TSV record has the same width. Use a CSV reader configured for tabs, since quoted
 fields can contain tabs and newlines.
 
-For Calc rich-text or multi-line cells, use `--preserve-whitespace` to keep literal paragraph spaces
-that the default ODF rules collapse. It works with either value mode and is recorded in both
-manifests. The default remains useful for XML whose paragraph whitespace includes formatting
-indentation. This option preserves saved text; it does not render styles or calculate values.
-See the [whitespace contract](docs/FORMAT.md#tsv-values-and-coordinates).
+`--preserve-whitespace` keeps literal spaces inside saved cell paragraphs. Here are the resulting
+cell values; surrounding quotes mark the value boundaries and `\n` means a line break:
+
+| Saved cell XML | Default | `--preserve-whitespace` |
+| --- | --- | --- |
+| `<text:p>  A  B </text:p>` | `"A B"` | `"  A  B "` |
+| `<text:p>A</text:p><text:p>  B</text:p>` | `"A\nB"` | `"A\n  B"` |
+| `<text:p>A<text:s/>B</text:p>` | `"A B"` | `"A B"` |
+| `<text:p>A<text:s/></text:p>` | `"A "` | `"A "` |
+
+Calc can save rich-text/multi-line spaces literally, so use the option to retain them. Explicit
+ODF whitespace elements such as `text:s` survive in both modes, including trailing spaces. This
+is not a blanket trim option. `--raw` independently chooses the stored value when available; the
+whitespace option applies when paragraph text supplies the value. See the
+[whitespace contract](docs/FORMAT.md#tsv-values-and-coordinates).
+
+When importing TSV into Calc, choose tabs and double quotes, set all columns to **Text**, and
+disable formula evaluation and space trimming. This keeps leading zeros, formula-looking text and
+spaces as exported. The automated suite uses Calc's real importer with these settings, then saves
+and reopens the result; it checks text values rather than restoring workbook types or styles.
+
+From alpha.5, ZIPs contain the executable, a short `README.txt`, and application/third-party licenses.
+Examples, schema, format reference and developer guides stay in this repository. The portable guide
+links to the matching release tag. Alpha.5 also replaces `manifest.txt` with `README.txt` and the
+bare-path stdout result with a labeled completion message. For automation, choose `--output` and
+read its `manifest.json` rather than parsing the human completion message.
 
 On failure the tool cleans its own outputs. Interruption or failed cleanup can leave `.incomplete`;
 discard that partial export and rerun into a new directory. Consume output only when both manifests
@@ -113,7 +136,9 @@ Options:
 
 Exports every sheet, including hidden and empty sheets. Preserves original coordinates and fills merged cells. Formulas use saved results; they are never recalculated.
 
-Output: one TSV per sheet, manifest.txt, and manifest.json (including original merged ranges). The destination must be new. Without --output, creates a fresh timestamped directory in the current working directory.
+Output: one TSV per sheet, README.txt (settings and sheet map), and manifest.json (full metadata, including original merged ranges). The destination must be new. Without --output, creates a fresh timestamped directory in the current working directory. Success prints a completion message naming that directory; warnings go to stderr.
+
+Whitespace: literal paragraph text "  A  B " becomes "A B" by default; --preserve-whitespace keeps "  A  B ". Explicit ODF spaces survive both modes. --raw independently prefers stored values over paragraphs.
 
 Limits: 64 MiB content XML, 256 open XML elements, 256 MiB total TSV/manifest bytes, 10,000,000 rectangular fields per sheet, 1 MiB per cell, 100,000 merged regions per sheet. Encrypted workbook content is unsupported.
 ```
