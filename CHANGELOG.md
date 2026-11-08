@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0-alpha.4
+
+Adopt the owner's selected MIT license for the application, including authorized prototype-derived
+material. Replace the application GPL file with `LICENSE`, update Cargo metadata and public guides,
+and verify that portable ZIPs carry MIT alongside the unchanged third-party notices.
+
+Conversion behavior, options and manifest schema remain the same as alpha.3. Earlier release tags
+and archives keep their original notices. [Decision and release evidence](https://github.com/viell-dev/slop-ods2tsv/issues/25).
+[Human installation/use request before stable](https://github.com/viell-dev/slop-ods2tsv/issues/22).
+
 ## 0.1.0-alpha.3
 
 Add `--preserve-whitespace` for literal cell-paragraph text, including Calc rich-text/multi-line

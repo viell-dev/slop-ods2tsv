@@ -1,10 +1,10 @@
 [package]
 name = "ods2tsv"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 edition = "2024"
 rust-version = "1.99"
 description = "Export saved OpenDocument spreadsheet values to TSV with ordered workbook manifests"
-license = "GPL-3.0-only"
+license = "MIT"
 repository = "https://github.com/viell-dev/slop-ods2tsv"
 readme = "README.md"
 
