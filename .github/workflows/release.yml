@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish the checked prerelease (false verifies builds only)
+        description: Publish the checked release (false verifies builds only)
         type: boolean
         default: false
 permissions:

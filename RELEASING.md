@@ -9,7 +9,7 @@ grid/text contract, ordered overview/JSON metadata, bounded failure handling and
 The [human usability request](https://github.com/viell-dev/slop-ods2tsv/issues/22) is complete:
 alpha.3 natural use and focused alpha.5 presentation feedback, with its concrete findings fixed.
 Separate agent-run checks remain functional evidence and are not the person's report.
-The beta.1 metadata/documentation update changes no extraction or interaction behavior, so those
+The RC.1 publisher/metadata update changes no extraction or interaction behavior, so those
 human reports and the alpha.5 correctness-checked benchmarks remain representative. The tracker and
 preparation PR retain scope, exact commit, checks/results, benchmark method, platform evidence,
 review findings and remaining limits.
@@ -64,11 +64,20 @@ checks must pass. Required real-file suites must fail when fixtures are absent.
 ## Publish and recover
 
 After merging the checked preparation PR, dispatch the Release workflow from `main`. It defaults
-to verification without publication. Publishing requires explicit input, an alpha/beta/RC version,
-and successful CI for the exact main commit. Both target artifacts are built and tested before a
-separate minimally privileged job creates the prerelease with its notes and checksums.
-The current publisher accepts prereleases only; [stable publication support](https://github.com/viell-dev/slop-ods2tsv/issues/38)
-must be implemented and checked before `0.1.0`, without weakening these evidence requirements.
+to verification without publication. Publishing requires explicit input, a canonical stable or
+alpha/beta/RC version, and successful CI for the exact main commit. Both target artifacts are built
+and tested before a separate minimally privileged job creates the release with notes and checksums.
+The [publisher](https://github.com/viell-dev/slop-ods2tsv/issues/38) marks alpha/beta/RC as
+prereleases and never Latest. Stable versions use the normal release channel and GitHub's automatic
+Latest selection. Notes identify the correct channel. All branch/commit/CI/tag/archive/checksum
+gates apply to either path; `python scripts/test_release.py` checks both paths and failure cases
+without real Git/GitHub calls. A dry run writes eligibility output without publishing or notes.
+
+Before stable promotion, record comparison with the chosen RC: converter source, dependencies,
+toolchain and packaging scripts must be unchanged. Version/documentation metadata can identify the
+final release; rebuild and verify those actual downloads rather than claiming RC byte identity.
+Material changes need another RC. Record the agreed goal, representative human evidence and any
+remaining finding dispositions in the stable preparation PR before dispatching publication.
 
 After publication verify the tag's commit, download assets, compare hashes/file lists, and execute
 the actual downloads on Windows and Linux. Record release links, run IDs and verification in the

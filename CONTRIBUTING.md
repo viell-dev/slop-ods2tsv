@@ -40,6 +40,7 @@ Python 3.11+ supports schema, docs and artifact checks. In an isolated environme
 
 ```sh
 python -m pip install -r requirements-dev.txt
+python scripts/test_release.py
 python scripts/check.py --binary target/debug/ods2tsv
 ```
 
@@ -48,6 +49,9 @@ diff, and rerun without it. CI checks actual help, version, generated schema-con
 and local Markdown file links. Update public prose/examples with behavior changes and wrap prose
 at 100 columns. A documentation site is not required. Coverage reports expose gaps; percentages
 alone do not establish correctness.
+The release suite uses synthetic archives and simulated external command results to verify channel
+selection, notes and failure gates without publishing. It complements actual workflow/download
+verification; it is not evidence of GitHub's live behavior by itself.
 
 If device Application Control blocks generated build scripts or unsigned executables, retain the
 error and use platform CI evidence. Do not bypass security policy; report actual tested environments.

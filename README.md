@@ -5,12 +5,12 @@ inventory and JSON manifest preserving sheet order and original merged regions.
 
 ## Status
 
-This checkout targets `0.1.0-beta.1`, the first feature-complete beta. See
+This checkout targets `0.1.0-rc.1`, the intended first-stable candidate. See
 [releases](https://github.com/viell-dev/slop-ods2tsv/releases) for publication status and downloads,
 the [changelog](CHANGELOG.md) for changes, and the [release
-tracker](https://github.com/viell-dev/slop-ods2tsv/issues/37) for current work. A source checkout
+tracker](https://github.com/viell-dev/slop-ods2tsv/issues/40) for current work. A source checkout
 can include unreleased corrections; use `README.txt` bundled with an installed ZIP for that version's
-contract. Behavior and the manifest can change before stable; beta work focuses on fixes and polish.
+contract. Material changes after this candidate require another RC before stable promotion.
 The [stable goal](https://github.com/viell-dev/slop-ods2tsv/issues/21) is agreed and the current
 [human usability feedback](https://github.com/viell-dev/slop-ods2tsv/issues/22) is handled. There is
 no documentation site: this README, `--help`, and the [format guide](docs/FORMAT.md) cover the CLI.

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.0-rc.1
+
+First candidate for the agreed `0.1.0` release. Converter behavior, dependencies, options, limits,
+manifest schema 1 and portable ZIP inventory remain unchanged from beta.1.
+
+Support stable publication with the normal GitHub release channel and accurate notes; alpha/beta/RC
+remain prereleases. Retain exact-main CI, new-tag and both-platform artifact/integrity gates. Add
+ten deterministic publication/channel/failure-gate tests to required CI, without making real
+releases during tests. Document RC comparison and version-only stable promotion checks.
+[Publisher work](https://github.com/viell-dev/slop-ods2tsv/issues/38),
+[review and candidate evidence](https://github.com/viell-dev/slop-ods2tsv/issues/40).
+
 ## 0.1.0-beta.1
 
 Enter beta against the agreed first-stable scope after the alpha.5 usability corrections and
