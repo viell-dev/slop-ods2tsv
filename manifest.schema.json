@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/viell-dev/slop-ods2tsv/0.1.0-rc.1/manifest.schema.json",
+  "$id": "https://raw.githubusercontent.com/viell-dev/slop-ods2tsv/0.1.0/manifest.schema.json",
   "title": "ODS2TSV manifest schema 1",
   "type": "object",
   "required": ["schema_version", "exporter", "source", "exported_at", "options", "tsv", "sheets"],

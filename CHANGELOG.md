@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.0
+
+First stable release for the agreed Windows/Linux portable CLI. Promote the verified RC.1 with
+release version and documentation metadata only: extraction, options, limits, dependencies,
+manifest schema 1 and ZIP inventory are unchanged. Existing human usability evidence remains
+representative. Each rebuilt platform ZIP is verified for this release. Existing documented limits
+continue to apply. Additional features and distribution formats remain subject to scope review.
+[Release verification](https://github.com/viell-dev/slop-ods2tsv/issues/38),
+[verified candidate](https://github.com/viell-dev/slop-ods2tsv/issues/40),
+[agreed goal](https://github.com/viell-dev/slop-ods2tsv/issues/21) and
+[human feedback](https://github.com/viell-dev/slop-ods2tsv/issues/22).
+
 ## 0.1.0-rc.1
 
 First candidate for the agreed `0.1.0` release. Converter behavior, dependencies, options, limits,

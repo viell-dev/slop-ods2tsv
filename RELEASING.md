@@ -9,10 +9,12 @@ grid/text contract, ordered overview/JSON metadata, bounded failure handling and
 The [human usability request](https://github.com/viell-dev/slop-ods2tsv/issues/22) is complete:
 alpha.3 natural use and focused alpha.5 presentation feedback, with its concrete findings fixed.
 Separate agent-run checks remain functional evidence and are not the person's report.
-The RC.1 publisher/metadata update changes no extraction or interaction behavior, so those
-human reports and the alpha.5 correctness-checked benchmarks remain representative. The tracker and
-preparation PR retain scope, exact commit, checks/results, benchmark method, platform evidence,
-review findings and remaining limits.
+The verified RC.1 and metadata-only `0.1.0` promotion change no extraction or interaction behavior,
+so those human reports and the alpha.5 correctness-checked benchmarks remain representative.
+The [candidate verification](https://github.com/viell-dev/slop-ods2tsv/issues/40) is complete;
+the [stable tracker](https://github.com/viell-dev/slop-ods2tsv/issues/38) owns rebuilt download and
+normal release-channel verification. The tracker and preparation PR retain scope, exact commit,
+checks/results, benchmark method, platform evidence, review findings and remaining limits.
 Each version's changelog entry links its own tracker; that entry becomes its release notes.
 
 Every release PR gets independent agent review of all changes since the previous release, plus

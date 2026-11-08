@@ -5,12 +5,13 @@ inventory and JSON manifest preserving sheet order and original merged regions.
 
 ## Status
 
-This checkout targets `0.1.0-rc.1`, the intended first-stable candidate. See
+This checkout targets `0.1.0`, the first stable version for the agreed Windows/Linux portable CLI. See
 [releases](https://github.com/viell-dev/slop-ods2tsv/releases) for publication status and downloads,
 the [changelog](CHANGELOG.md) for changes, and the [release
-tracker](https://github.com/viell-dev/slop-ods2tsv/issues/40) for current work. A source checkout
+tracker](https://github.com/viell-dev/slop-ods2tsv/issues/38) for current work. A source checkout
 can include unreleased corrections; use `README.txt` bundled with an installed ZIP for that version's
-contract. Material changes after this candidate require another RC before stable promotion.
+contract. The [release candidate](https://github.com/viell-dev/slop-ods2tsv/issues/40) is verified;
+this promotion changes release metadata and documentation only.
 The [stable goal](https://github.com/viell-dev/slop-ods2tsv/issues/21) is agreed and the current
 [human usability feedback](https://github.com/viell-dev/slop-ods2tsv/issues/22) is handled. There is
 no documentation site: this README, `--help`, and the [format guide](docs/FORMAT.md) cover the CLI.
