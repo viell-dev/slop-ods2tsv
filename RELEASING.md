@@ -3,11 +3,14 @@
 ## Readiness
 
 `Cargo.toml` owns the SemVer version, without a `v` prefix. Alpha/beta/RC versions are GitHub
-prereleases. [The first stable scope proposal](https://github.com/viell-dev/slop-ods2tsv/issues/21)
-is still pending. A [human usability report](https://github.com/viell-dev/slop-ods2tsv/issues/22)
-was received for alpha.3; alpha.5 addresses its findings and needs focused feedback on the changed
-workflow before stable. Scope agreement blocks leaving alpha, and unresolved human usability work
-blocks stable publication; neither blocks routine maintenance alphas. The tracker and
+prereleases. [The first stable goal](https://github.com/viell-dev/slop-ods2tsv/issues/21) is agreed.
+It covers the existing Windows/Linux portable CLI: ODS/FODS saved-value extraction, the documented
+grid/text contract, ordered overview/JSON metadata, bounded failure handling and verified archives.
+The [human usability request](https://github.com/viell-dev/slop-ods2tsv/issues/22) is complete:
+alpha.3 natural use and focused alpha.5 presentation feedback, with its concrete findings fixed.
+Separate agent-run checks remain functional evidence and are not the person's report.
+The beta.1 metadata/documentation update changes no extraction or interaction behavior, so those
+human reports and the alpha.5 correctness-checked benchmarks remain representative. The tracker and
 preparation PR retain scope, exact commit, checks/results, benchmark method, platform evidence,
 review findings and remaining limits.
 Each version's changelog entry links its own tracker; that entry becomes its release notes.
@@ -15,6 +18,13 @@ Each version's changelog entry links its own tracker; that entry becomes its rel
 Every release PR gets independent agent review of all changes since the previous release, plus
 author review after checks pass. Record the reviewed revision and verify material fixes. Required
 checks must pass on the final commit; never change protection to merge failing work.
+
+Beta means the agreed features are complete and known findings are fixed or dispositioned. RC is
+the exact intended stable candidate. Stable requires that candidate's engineering/platform evidence
+and representative human usability evidence with no unresolved release blocker. Reassess evidence
+after material changes. The [non-reproduced timing observation](https://github.com/viell-dev/slop-ods2tsv/issues/26)
+and [unsigned-device policy investigation](https://github.com/viell-dev/slop-ods2tsv/issues/28) retain
+their results and limits; neither is silently described as a performance or converter fix.
 
 ## Build and verify
 
@@ -57,6 +67,8 @@ After merging the checked preparation PR, dispatch the Release workflow from `ma
 to verification without publication. Publishing requires explicit input, an alpha/beta/RC version,
 and successful CI for the exact main commit. Both target artifacts are built and tested before a
 separate minimally privileged job creates the prerelease with its notes and checksums.
+The current publisher accepts prereleases only; [stable publication support](https://github.com/viell-dev/slop-ods2tsv/issues/38)
+must be implemented and checked before `0.1.0`, without weakening these evidence requirements.
 
 After publication verify the tag's commit, download assets, compare hashes/file lists, and execute
 the actual downloads on Windows and Linux. Record release links, run IDs and verification in the
@@ -66,8 +78,8 @@ limits without implying owner code review.
 Never replace published bytes, move a release tag, or reuse a version. A dry run leaves publication
 state unchanged. For partial publication, inspect existing state, then add only missing assets
 whose hashes match checked artifacts for that same commit; use no overwrite flag. If bytes need
-replacing, publish a new alpha and explain supersession. Irreversible settings need express owner
-approval; this procedure does not enable immutable releases.
+replacing, publish a new appropriate prerelease and explain supersession. Irreversible settings need
+express owner approval; this procedure does not enable immutable releases.
 
 ## Human gate before stable
 
@@ -87,6 +99,7 @@ report separately from maintainer dispositions. Keep it open until required cove
 work are complete; merging preparation must not close it. Missing/partial feedback leaves uncovered
 scope pending. Automated execution, screenshots and agent review cannot satisfy this gate.
 
-An alpha may enable testing after engineering checks pass; it does not establish stable readiness.
-ZIPs remain the baseline. Consider `.deb`, other Linux packages, AppImage, repository submissions
-and installer URLs only near stable after sustained use; these are optional later decisions.
+A prerelease may enable testing after engineering checks pass; it does not establish stable readiness.
+ZIPs remain the baseline. `.deb`, other Linux packages, AppImage, repository submissions and installer
+URLs are examples of possible proposals, not promised eventual goals. Weigh each actual addition
+against project scope, benefit and ongoing maintenance/support cost before acceptance.

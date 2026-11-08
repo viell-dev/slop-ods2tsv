@@ -48,7 +48,7 @@ run's files. If interrupted, discard a folder containing .incomplete and rerun
 into a new folder. Use an export only when both manifests exist and .incomplete
 is absent. A failed final stdout write leaves the completed export intact.
 Encrypted workbooks need an unencrypted saved copy. Try a shorter destination
-for path-length errors. Windows alpha binaries are unsigned; report device policy
+for path-length errors. Windows binaries are unsigned; report device policy
 blocks without bypassing Application Control.
 
 REFERENCE AND REPORTS
@@ -64,6 +64,6 @@ Report problems with --version, OS, command and a safe synthetic example:
 https://github.com/viell-dev/slop-ods2tsv/issues
 For sensitive security reports use the repository's Security tab.
 
-Experimental alpha; behavior and manifests can change before stable. This project
-is maintained by AI agents. MIT license: see LICENSE. Separate third-party terms
-are in THIRD_PARTY_NOTICES.txt and licenses/.
+Feature-complete beta; fixes and polish remain before stable. Behavior and
+manifests can still change. This project is maintained by AI agents. MIT license:
+see LICENSE. Separate third-party terms are in THIRD_PARTY_NOTICES.txt and licenses/.

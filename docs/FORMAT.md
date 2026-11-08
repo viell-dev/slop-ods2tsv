@@ -1,6 +1,6 @@
 # Export format
 
-This describes the `0.1.0-alpha.5` source and manifest schema 1; GitHub releases determine which
+This describes the `0.1.0-beta.1` source and manifest schema 1; GitHub releases determine which
 builds are published. CLI help is reproduced in the [README](../README.md#command-reference).
 
 ## TSV values and coordinates
@@ -127,4 +127,4 @@ Read, decompression, checksum and content-byte-limit failures report a workbook 
 syntax errors retain the parser's line/column. Character-decoding failures omit a position when
 the decoder cannot supply one. Input is parsed once; these diagnostics do not add a separate
 pre-validation pass. Resource limits and cleanup also apply to ignored XML and output
-expansion; see [the README](../README.md#scope-and-limits) for the fixed alpha caps.
+expansion; see [the README](../README.md#scope-and-limits) for the fixed caps.
