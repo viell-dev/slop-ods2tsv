@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="720" viewBox="0 0 1020 720" role="img" aria-labelledby="title desc">
+<title id="title">Complete ODS2TSV exports: private workload and fixed-work sheet scaling</title>
+<desc id="desc">Private workload median elapsed times, and parallel speedups across sheet counts. Three measured rounds except five for 5000 sheets. All startup, indexing, parsing and ordered output included.</desc>
+<style>text{font:15px system-ui,sans-serif;fill:#172033}.small{font-size:12px}.heading{font-size:20px;font-weight:650}</style>
+<rect width="1020" height="720" fill="white"/>
+<text x="26" y="32" class="heading">Private 92-sheet workload: complete export seconds</text>
+<text x="26" y="73">Unchanged serial</text>
+<rect x="300" y="56" width="480.81" height="23" fill="#7d899c"/>
+<text x="792.81" y="73">3.005 s</text>
+<text x="26" y="105">Instrumented serial</text>
+<rect x="300" y="88" width="477.39" height="23" fill="#7d899c"/>
+<text x="789.39" y="105">2.984 s</text>
+<text x="26" y="137">Index + 1 worker</text>
+<rect x="300" y="120" width="545.08" height="23" fill="#7d899c"/>
+<text x="857.08" y="137">3.407 s</text>
+<text x="26" y="169">Index + 2 workers</text>
+<rect x="300" y="152" width="355.11" height="23" fill="#2563eb"/>
+<text x="667.11" y="169">2.219 s</text>
+<text x="26" y="201">Index + 4 workers</text>
+<rect x="300" y="184" width="230.63" height="23" fill="#2563eb"/>
+<text x="542.63" y="201">1.441 s</text>
+<text x="26" y="233">Index + 6 workers</text>
+<rect x="300" y="216" width="213.16" height="23" fill="#2563eb"/>
+<text x="525.16" y="233">1.332 s</text>
+<text x="26" y="265">Serial parse + writer overlap</text>
+<rect x="300" y="248" width="502.59" height="23" fill="#7d899c"/>
+<text x="814.59" y="265">3.141 s</text>
+<text x="26" y="314" class="heading">Fixed 120,000 cells: speedup versus unchanged serial</text>
+<line x1="85" y1="620" x2="900" y2="620" stroke="#e5e7eb"/>
+<text x="40" y="625" class="small">0×</text>
+<line x1="85" y1="577.5" x2="900" y2="577.5" stroke="#e5e7eb"/>
+<text x="40" y="582.5" class="small">0.5×</text>
+<line x1="85" y1="535" x2="900" y2="535" stroke="#374151"/>
+<text x="40" y="540" class="small">1×</text>
+<line x1="85" y1="492.5" x2="900" y2="492.5" stroke="#e5e7eb"/>
+<text x="40" y="497.5" class="small">1.5×</text>
+<line x1="85" y1="450" x2="900" y2="450" stroke="#e5e7eb"/>
+<text x="40" y="455" class="small">2×</text>
+<line x1="85" y1="407.5" x2="900" y2="407.5" stroke="#e5e7eb"/>
+<text x="40" y="412.5" class="small">2.5×</text>
+<line x1="85" y1="365" x2="900" y2="365" stroke="#e5e7eb"/>
+<text x="40" y="370" class="small">3×</text>
+<text x="100" y="645" text-anchor="middle" class="small">1</text>
+<text x="200" y="645" text-anchor="middle" class="small">2</text>
+<text x="300" y="645" text-anchor="middle" class="small">4</text>
+<text x="400" y="645" text-anchor="middle" class="small">8</text>
+<text x="500" y="645" text-anchor="middle" class="small">16</text>
+<text x="620" y="645" text-anchor="middle" class="small">100</text>
+<text x="740" y="645" text-anchor="middle" class="small">1000</text>
+<text x="860" y="645" text-anchor="middle" class="small">5000</text>
+<polyline fill="none" stroke="#9ca3af" stroke-width="2.5" points="100,547.95 200,547.08 300,546.98 400,549.69 500,549.43 620,547.09 740,552.52 860,552.66"/>
+<circle cx="100" cy="547.95" r="4" fill="#9ca3af"/>
+<circle cx="200" cy="547.08" r="4" fill="#9ca3af"/>
+<circle cx="300" cy="546.98" r="4" fill="#9ca3af"/>
+<circle cx="400" cy="549.69" r="4" fill="#9ca3af"/>
+<circle cx="500" cy="549.43" r="4" fill="#9ca3af"/>
+<circle cx="620" cy="547.09" r="4" fill="#9ca3af"/>
+<circle cx="740" cy="552.52" r="4" fill="#9ca3af"/>
+<circle cx="860" cy="552.66" r="4" fill="#9ca3af"/>
+<rect x="110" y="674" width="20" height="4" fill="#9ca3af"/>
+<text x="138" y="680" class="small">1 worker(s)</text>
+<polyline fill="none" stroke="#b45309" stroke-width="2.5" points="100,549.18 200,497.59 300,498.94 400,502.64 500,502.11 620,501.31 740,508.71 860,572.29"/>
+<circle cx="100" cy="549.18" r="4" fill="#b45309"/>
+<circle cx="200" cy="497.59" r="4" fill="#b45309"/>
+<circle cx="300" cy="498.94" r="4" fill="#b45309"/>
+<circle cx="400" cy="502.64" r="4" fill="#b45309"/>
+<circle cx="500" cy="502.11" r="4" fill="#b45309"/>
+<circle cx="620" cy="501.31" r="4" fill="#b45309"/>
+<circle cx="740" cy="508.71" r="4" fill="#b45309"/>
+<circle cx="860" cy="572.29" r="4" fill="#b45309"/>
+<rect x="300" y="674" width="20" height="4" fill="#b45309"/>
+<text x="328" y="680" class="small">2 worker(s)</text>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="100,547.39 200,497.48 300,426.21 400,433.67 500,432.14 620,428.25 740,468.63 860,554.89"/>
+<circle cx="100" cy="547.39" r="4" fill="#2563eb"/>
+<circle cx="200" cy="497.48" r="4" fill="#2563eb"/>
+<circle cx="300" cy="426.21" r="4" fill="#2563eb"/>
+<circle cx="400" cy="433.67" r="4" fill="#2563eb"/>
+<circle cx="500" cy="432.14" r="4" fill="#2563eb"/>
+<circle cx="620" cy="428.25" r="4" fill="#2563eb"/>
+<circle cx="740" cy="468.63" r="4" fill="#2563eb"/>
+<circle cx="860" cy="554.89" r="4" fill="#2563eb"/>
+<rect x="490" y="674" width="20" height="4" fill="#2563eb"/>
+<text x="518" y="680" class="small">4 worker(s)</text>
+<polyline fill="none" stroke="#15803d" stroke-width="2.5" points="100,547.80 200,499.01 300,425.33 400,426.47 500,397.61 620,399.43 740,433.63 860,543.80"/>
+<circle cx="100" cy="547.80" r="4" fill="#15803d"/>
+<circle cx="200" cy="499.01" r="4" fill="#15803d"/>
+<circle cx="300" cy="425.33" r="4" fill="#15803d"/>
+<circle cx="400" cy="426.47" r="4" fill="#15803d"/>
+<circle cx="500" cy="397.61" r="4" fill="#15803d"/>
+<circle cx="620" cy="399.43" r="4" fill="#15803d"/>
+<circle cx="740" cy="433.63" r="4" fill="#15803d"/>
+<circle cx="860" cy="543.80" r="4" fill="#15803d"/>
+<rect x="680" y="674" width="20" height="4" fill="#15803d"/>
+<text x="708" y="680" class="small">6 worker(s)</text>
+<text x="480" y="662" text-anchor="middle" class="small">Sheets (categorical spacing); 1× line is unchanged serial</text>
+<text x="26" y="709" class="small">6-CPU / 3-GiB Linux Docker cap; warm filesystem; tiny-sheet variance retained; no hard timing gate.</text></svg>
