@@ -1,0 +1,100 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running unittests src/lib.rs (target/debug/deps/ods2tsv-21d368ba1633f857)
+
+running 11 tests
+test input::tests::byte_limit_allows_exact_eof_and_rejects_additional_data ... ok
+test input::tests::read_budget_errors_keep_their_cause_without_an_xml_position ... ok
+test output::tests::output_byte_counter_is_shared_exact_and_counts_encoded_bytes ... ok
+test output::tests::portable_names_handle_windows_devices_and_unicode ... ok
+test sheet::tests::sink_failure_is_not_reported_as_success ... ok
+test output::tests::cleanup_preserves_unrelated_contents_and_leaves_marker ... ok
+test output::tests::merge_reservations_stop_accumulation_during_sheet_processing ... ok
+test output::tests::merge_reservation_is_refunded_once_for_exact_physical_accounting ... ok
+test output::tests::output_budget_covers_multiple_sheets_and_manifests_with_cleanup ... ok
+test sheet::tests::vertical_merges_match_a_dense_reference ... ok
+test sheet::tests::repeated_values_match_simple_expansion ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running unittests src/main.rs (target/debug/deps/ods2tsv-219b10511c75a812)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/export.rs (target/debug/deps/export-d28a7a0da3c62998)
+
+running 28 tests
+error: the following required arguments were not provided:
+  <FILE>
+
+Usage: ods2tsv <FILE>
+
+For more information, try '--help'.
+test decoder_errors_omit_unknown_positions_but_parser_eof_keeps_its_position ... ok
+test buffered_package_reads_still_reject_a_bad_content_checksum ... FAILED
+test covered_content_is_discarded_in_favor_of_the_merge_anchor ... ok
+test distinct_portable_names_empty_sheets_and_order_survive ... ok
+test cli_reports_exit_codes_and_fresh_default_directories ... FAILED
+test existing_destinations_are_not_modified ... ok
+test flat_input_aliases_row_wrappers_and_utf16_work ... ok
+test cached_errors_keep_text_and_coordinates_in_both_modes ... ok
+test formula_warnings_distinguish_missing_from_saved_empty_results ... ok
+test giant_empty_tail_is_not_expanded_but_large_populated_output_is_refused ... ok
+test explicit_whitespace_separates_ordinary_space_runs ... ok
+test malformed_xml_keeps_its_syntax_position ... FAILED
+test literal_whitespace_is_opt_in_independent_of_value_mode_and_recorded ... ok
+test invalid_and_truncated_documents_cannot_leave_completed_exports ... ok
+test merges_fill_spilled_rows_and_metadata_keeps_empty_outlying_merges ... ok
+test only_encrypted_content_is_refused_not_unrelated_embedded_streams ... ok
+test preserves_coordinates_and_rectangular_output ... ok
+test error_cells_use_meaningful_paragraphs_then_attributes_in_both_modes ... ok
+test preserves_odf_text_and_excludes_non_cell_subtrees ... ok
+test repeated_rows_cells_and_merges_preserve_each_original_region ... ok
+test raw_values_remain_lexical_and_formulas_are_not_calculated ... ok
+test ruby_annotations_and_note_bodies_do_not_enter_paragraph_values ... ok
+test xml_depth_is_bounded_including_ignored_subtrees_and_metadata ... FAILED
+test many_colliding_sheet_names_keep_unique_manifest_mappings ... ok
+test tiny_repeated_input_stops_at_the_real_output_byte_budget_and_cleans_up ... ok
+test cell_byte_limit_counts_only_exported_paragraph_separators ... ok
+test large_ignored_content_does_not_consume_a_cell_budget ... ok
+test oversized_cells_have_a_specific_error_and_clean_up ... ok
+
+failures:
+
+---- buffered_package_reads_still_reject_a_bad_content_checksum stdout ----
+RESEARCH {"fallback":false,"finish_abort_s":0.000244925,"index_validate_s":0.000259096,"materialize_s":0.00010814,"mode":"4","ok":true,"open_s":0.000175668,"parse_s":0.000407985,"pool_s":0.000266738,"total_s":0.001700339,"write_s":0.00012847}
+RESEARCH {"fallback":false,"finish_abort_s":0.000058111,"index_validate_s":0.0,"materialize_s":0.0,"mode":"4","ok":false,"open_s":0.000132262,"parse_s":0.0,"pool_s":0.0,"total_s":0.000390226,"write_s":0.0}
+
+thread 'buffered_package_reads_still_reject_a_bad_content_checksum' (3803) panicked at tests/export.rs:618:5:
+assertion failed: matches!(error, ods2tsv::Error::Read { .. })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- cli_reports_exit_codes_and_fresh_default_directories stdout ----
+
+thread 'cli_reports_exit_codes_and_fresh_default_directories' (3806) panicked at tests/export.rs:422:9:
+assertion failed: result.stderr.is_empty()
+
+---- malformed_xml_keeps_its_syntax_position stdout ----
+RESEARCH {"fallback":false,"finish_abort_s":0.000057934,"index_validate_s":0.0,"materialize_s":0.000092436,"mode":"4","ok":false,"open_s":0.000128888,"parse_s":0.0,"pool_s":0.0,"total_s":0.0004337,"write_s":0.0}
+
+thread 'malformed_xml_keeps_its_syntax_position' (3889) panicked at tests/export.rs:763:5:
+research index: ill-formed document: expected `</z>`, but `</wrong>` was found
+
+---- xml_depth_is_bounded_including_ignored_subtrees_and_metadata stdout ----
+RESEARCH {"fallback":false,"finish_abort_s":0.000234684,"index_validate_s":0.001224263,"materialize_s":0.000115893,"mode":"4","ok":true,"open_s":0.000111927,"parse_s":0.00536636,"pool_s":0.000136727,"total_s":0.007360905,"write_s":0.000081978}
+RESEARCH {"fallback":false,"finish_abort_s":0.000053861,"index_validate_s":0.0,"materialize_s":0.00012046,"mode":"4","ok":false,"open_s":0.000126295,"parse_s":0.0,"pool_s":0.0,"total_s":0.001104671,"write_s":0.0}
+
+thread 'xml_depth_is_bounded_including_ignored_subtrees_and_metadata' (3980) panicked at tests/export.rs:731:17:
+assertion failed: failed(&source_xml).contains("256 open elements")
+
+
+failures:
+    buffered_package_reads_still_reject_a_bad_content_checksum
+    cli_reports_exit_codes_and_fresh_default_directories
+    malformed_xml_keeps_its_syntax_position
+    xml_depth_is_bounded_including_ignored_subtrees_and_metadata
+
+test result: FAILED. 24 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.25s
+
+error: test failed, to rerun pass `--test export`

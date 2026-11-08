@@ -1,0 +1,334 @@
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -663,6 +663,8 @@
+  "csv",
+  "jiff",
+  "proptest",
++ "quick-xml",
++ "rayon",
+  "serde",
+  "serde_json",
+  "tempfile",
+@@ -793,6 +795,15 @@
+ checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
+ 
+ [[package]]
++name = "quick-xml"
++version = "0.42.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "41b1177fdf999d2321d3fb46ff47159d9c1fb9ad66a4879f8c50a0b504615e9b"
++dependencies = [
++ "memchr",
++]
++
++[[package]]
+ name = "quote"
+ version = "1.0.47"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -9,6 +9,8 @@
+ readme = "README.md"
+ 
+ [dependencies]
++rayon = "=1.12.0"
++quick-xml = "=0.42.0"
+ clap = { version = "4.6", features = ["derive"] }
+ csv = "1.4"
+ jiff = "0.2"
+--- a/src/input.rs
++++ b/src/input.rs
+@@ -69,6 +69,27 @@
+         self.size
+     }
+ 
++    pub fn materialize(&mut self) -> Result<Vec<u8>, Error> {
++        let mut bytes = Vec::new();
++        match &mut self.kind {
++            Kind::Package(archive) => {
++                let content = archive.by_name("content.xml")?;
++                Limited {
++                    inner: content,
++                    remaining: MAX_XML_BYTES,
++                }
++                .read_to_end(&mut bytes)
++            }
++            Kind::Flat(file) => Limited {
++                inner: file,
++                remaining: MAX_XML_BYTES,
++            }
++            .read_to_end(&mut bytes),
++        }
++        .map_err(|e| io("research materializing workbook content", e))?;
++        Ok(bytes)
++    }
++
+     pub fn read(
+         &mut self,
+         options: &Options,
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -3,6 +3,7 @@
+ mod manifest;
+ mod output;
+ mod reader;
++mod research;
+ mod sheet;
+ 
+ use std::path::{Path, PathBuf};
+@@ -107,6 +108,9 @@
+ /// Failures clean up only files created by this run. If cleanup cannot complete, the error names
+ /// the marked partial directory. Existing destinations are never reused.
+ pub fn export(path: &Path, options: &Options) -> Result<Export, Error> {
++    if std::env::var_os("RESEARCH_MODE").is_some() {
++        return research::export(path, options);
++    }
+     let mut source = input::Source::open(path)?;
+     let mut run = output::Run::new(path, options)?;
+     let result = source.read(options, |sheet| run.write(sheet));
+--- /dev/null
++++ b/src/research.rs
+@@ -0,0 +1,243 @@
++//! Disposable research harness; not production code or a proposed public API.
++use crate::{Error, Export, Options, input, invalid, output, reader, sheet::Sheet};
++use quick_xml::{events::Event, name::ResolveResult, reader::NsReader};
++use rayon::prelude::*;
++use std::{io::Read, path::Path, time::Instant};
++
++const OFFICE: &str = "urn:oasis:names:tc:opendocument:xmlns:office:1.0";
++const TABLE: &str = "urn:oasis:names:tc:opendocument:xmlns:table:1.0";
++
++struct Frame {
++    open: Vec<u8>,
++    close: Vec<u8>,
++    spreadsheet: bool,
++}
++struct Chunk {
++    start: usize,
++    end: usize,
++    prefix: Vec<u8>,
++    suffix: Vec<u8>,
++}
++
++// XML events determine boundaries; raw bytes are used only after those boundaries are known.
++// Original ancestor start tags retain inherited namespaces, xml:space, and original wrapper depth.
++fn index(bytes: &[u8]) -> Result<Option<Vec<Chunk>>, Error> {
++    if std::str::from_utf8(bytes).is_err() {
++        return Ok(None);
++    }
++    let mut xml = NsReader::from_reader(bytes);
++    xml.config_mut().enable_all_checks(true);
++    let mut stack: Vec<Frame> = Vec::new();
++    let mut chunks = Vec::new();
++    let mut active: Option<(usize, Chunk)> = None;
++    loop {
++        let before = xml.buffer_position() as usize;
++        let (ns, event) = xml
++            .read_resolved_event()
++            .map_err(|e| invalid(format!("research index: {e}")))?;
++        let is_table_ns = matches!(&ns, ResolveResult::Bound(n) if n.as_ref() == TABLE);
++        let is_office_ns = matches!(&ns, ResolveResult::Bound(n) if n.as_ref() == OFFICE);
++        match event {
++            Event::Decl(decl) => {
++                if let Some(enc) = decl.encoding() {
++                    let enc = enc.map_err(|e| invalid(e.to_string()))?;
++                    if !enc.eq_ignore_ascii_case("utf-8") {
++                        return Ok(None);
++                    }
++                }
++            }
++            Event::DocType(_) => {
++                return Err(invalid("DTD declarations are unsupported in workbook XML"));
++            }
++            Event::Start(ref element) | Event::Empty(ref element) => {
++                if stack.len() >= crate::MAX_XML_DEPTH {
++                    return Err(invalid("research original XML depth limit"));
++                }
++                let empty = matches!(event, Event::Empty(_));
++                let local = element.local_name();
++                let table = is_table_ns
++                    && local.as_ref() == "table"
++                    && stack.last().is_some_and(|p| p.spreadsheet)
++                    && active.is_none();
++                if table {
++                    let prefix = stack.iter().flat_map(|f| f.open.iter().copied()).collect();
++                    let suffix = stack
++                        .iter()
++                        .rev()
++                        .flat_map(|f| f.close.iter().copied())
++                        .collect();
++                    let chunk = Chunk {
++                        start: before,
++                        end: xml.buffer_position() as usize,
++                        prefix,
++                        suffix,
++                    };
++                    if empty {
++                        chunks.push(chunk);
++                    } else {
++                        active = Some((stack.len(), chunk));
++                    }
++                }
++                if !empty {
++                    let mut close = b"</".to_vec();
++                    close.extend_from_slice(element.name().as_ref().as_bytes());
++                    close.push(b'>');
++                    stack.push(Frame {
++                        open: bytes[before..xml.buffer_position() as usize].to_vec(),
++                        close,
++                        spreadsheet: is_office_ns && local.as_ref() == "spreadsheet",
++                    });
++                }
++            }
++            Event::End(_) => {
++                stack.pop();
++                if active
++                    .as_ref()
++                    .is_some_and(|(depth, _)| *depth == stack.len())
++                {
++                    let (_, mut chunk) = active.take().unwrap();
++                    chunk.end = xml.buffer_position() as usize;
++                    chunks.push(chunk);
++                }
++            }
++            Event::Eof => break,
++            _ => {}
++        }
++    }
++    // Validate the entire non-sheet XML with the original reader, including trailing syntax,
++    // unknown entities, multiple roots/bodies and the existing workbook contract.
++    let mut skeleton = Vec::new();
++    let mut previous = 0;
++    for chunk in &chunks {
++        skeleton.extend_from_slice(&bytes[previous..chunk.start]);
++        skeleton.extend_from_slice(
++            b"<r:table xmlns:r='urn:oasis:names:tc:opendocument:xmlns:table:1.0'/>",
++        );
++        previous = chunk.end;
++    }
++    skeleton.extend_from_slice(&bytes[previous..]);
++    reader::read(skeleton.as_slice(), &Options::default(), |_| Ok(()))?;
++    Ok(Some(chunks))
++}
++
++fn parse(bytes: &[u8], chunk: &Chunk, options: &Options) -> Result<Sheet, Error> {
++    let stream = chunk
++        .prefix
++        .as_slice()
++        .chain(&bytes[chunk.start..chunk.end])
++        .chain(chunk.suffix.as_slice());
++    let mut sheet = None;
++    reader::read(stream, options, |s| {
++        sheet = Some(s);
++        Ok(())
++    })?;
++    sheet.ok_or_else(|| invalid("research chunk has no sheet"))
++}
++
++pub(crate) fn export(path: &Path, options: &Options) -> Result<Export, Error> {
++    let total = Instant::now();
++    let mode = std::env::var("RESEARCH_MODE").unwrap_or_else(|_| "serial".into());
++    let mut source = input::Source::open(path)?;
++    let open = total.elapsed().as_secs_f64();
++    let mut run = output::Run::new(path, options)?;
++    let mut materialize = 0.;
++    let mut indexing = 0.;
++    let mut pool_time = 0.;
++    let mut parse_time = 0.;
++    let mut write_time = 0.;
++    let mut fallback = false;
++    let result = (|| {
++        if mode == "serial" {
++            let start = Instant::now();
++            source.read(options, |s| {
++                let t = Instant::now();
++                let r = run.write(s);
++                write_time += t.elapsed().as_secs_f64();
++                r
++            })?;
++            parse_time = start.elapsed().as_secs_f64() - write_time;
++        } else if mode == "overlap" {
++            // One serial parser and one ordered writer; queue holds at most one completed sheet.
++            let start = Instant::now();
++            let (tx, rx) = std::sync::mpsc::sync_channel::<Sheet>(1);
++            let (parsed, written) = std::thread::scope(|scope| {
++                let source = &mut source;
++                let parser = scope.spawn(move || {
++                    source.read(options, |s| {
++                        tx.send(s).map_err(|_| invalid("research writer stopped"))
++                    })
++                });
++                let mut outcome = Ok(());
++                for sheet in rx.iter() {
++                    if outcome.is_ok() {
++                        let t = Instant::now();
++                        outcome = run.write(sheet);
++                        write_time += t.elapsed().as_secs_f64();
++                    }
++                }
++                (parser.join().expect("research parser panic"), outcome)
++            });
++            // Producer is joined and channel drained before abort can remove any files.
++            written?;
++            parsed?;
++            parse_time = start.elapsed().as_secs_f64(); // pipeline wall, includes producer waits
++        } else {
++            let workers: usize = mode.parse().map_err(|_| invalid("research mode"))?;
++            let start = Instant::now();
++            let bytes = source.materialize()?;
++            materialize = start.elapsed().as_secs_f64();
++            let start = Instant::now();
++            let chunks = index(&bytes)?;
++            indexing = start.elapsed().as_secs_f64();
++            if let Some(chunks) = chunks {
++                let start = Instant::now();
++                let pool = rayon::ThreadPoolBuilder::new()
++                    .num_threads(workers)
++                    .build()
++                    .map_err(|e| invalid(e.to_string()))?;
++                pool_time = start.elapsed().as_secs_f64();
++                // At most 2*workers completed/active Sheet values. Indexed collection preserves order.
++                for batch in chunks.chunks(workers * 2) {
++                    let start = Instant::now();
++                    let sheets: Vec<Result<Sheet, Error>> = pool.install(|| {
++                        batch
++                            .par_iter()
++                            .map(|c| parse(&bytes, c, options))
++                            .collect()
++                    });
++                    parse_time += start.elapsed().as_secs_f64();
++                    for sheet in sheets {
++                        let sheet = sheet?;
++                        let start = Instant::now();
++                        let result = run.write(sheet);
++                        write_time += start.elapsed().as_secs_f64();
++                        result?;
++                    }
++                }
++                // install joined each batch: no workers write or survive abort cleanup.
++            } else {
++                fallback = true;
++                let start = Instant::now();
++                reader::read(bytes.as_slice(), options, |s| {
++                    let t = Instant::now();
++                    let r = run.write(s);
++                    write_time += t.elapsed().as_secs_f64();
++                    r
++                })?;
++                parse_time = start.elapsed().as_secs_f64() - write_time;
++            }
++        }
++        Ok(())
++    })();
++    let finish = Instant::now();
++    let result =
++        match result.and_then(|()| run.finish(source.format(), source.size(), path, options)) {
++            Ok(export) => Ok(export),
++            Err(error) => Err(run.abort(error)),
++        };
++    eprintln!(
++        "RESEARCH {}",
++        serde_json::json!({"mode":mode,"open_s":open,"materialize_s":materialize,"index_validate_s":indexing,"pool_s":pool_time,"parse_s":parse_time,"write_s":write_time,"finish_abort_s":finish.elapsed().as_secs_f64(),"total_s":total.elapsed().as_secs_f64(),"fallback":fallback,"ok":result.is_ok()})
++    );
++    result
++}
