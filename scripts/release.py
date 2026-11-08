@@ -1,4 +1,4 @@
-"""Validate the exact main commit and publish only a verified, new prerelease version."""
+"""Validate the exact main commit and publish only a verified, new release version."""
 import argparse
 import hashlib
 import json
@@ -18,7 +18,10 @@ def main():
     args = parser.parse_args()
     assert os.environ.get("GITHUB_REF") == "refs/heads/main", "Release must run from main"
     version = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))["package"]["version"]
-    assert re.fullmatch(r'\d+\.\d+\.\d+-(alpha|beta|rc)\.\d+', version), "Only explicit prereleases are currently supported"
+    number = r'(?:0|[1-9][0-9]*)'
+    match = re.fullmatch(rf'{number}\.{number}\.{number}(?:-(alpha|beta|rc)\.{number})?', version)
+    assert match, "Unsupported release version; use stable SemVer or alpha/beta/rc with a numeric suffix"
+    prerelease = match[1] is not None
     sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     assert sha == os.environ["GITHUB_SHA"]
     runs = json.loads(subprocess.check_output(["gh", "api", f"repos/{REPOSITORY}/actions/runs?head_sha={sha}&event=push"], text=True))
@@ -44,9 +47,10 @@ def main():
     entry = re.search(rf'(?ms)^## {re.escape(version)}\n(.*?)(?=^## |\Z)', changelog)
     assert entry, "No changelog entry for this version"
     notes = ROOT / "dist/release-notes.md"
-    notes.write_text(entry[1].strip() + f"\n\nDownload the ZIP and matching SHA-256 file for your platform. Extract and run; no language runtime is required. [Installation, commands and limits](https://github.com/{REPOSITORY}/blob/{version}/README.md).\n\nThis is an experimental prerelease, not a stable release. Formulas are not recalculated; content decryption is unsupported.\n", encoding="utf-8")
+    status = "This is an experimental prerelease, not a stable release." if prerelease else "This is a stable release."
+    notes.write_text(entry[1].strip() + f"\n\nDownload the ZIP and matching SHA-256 file for your platform. Extract and run; no language runtime is required. [Installation, commands and limits](https://github.com/{REPOSITORY}/blob/{version}/README.md).\n\n{status} Formulas are not recalculated; content decryption is unsupported.\n", encoding="utf-8")
     subprocess.run(["gh", "release", "create", version, *assets, "--repo", REPOSITORY,
-                    "--target", sha, "--title", version, "--prerelease", "--latest=false",
+                    "--target", sha, "--title", version, *(["--prerelease", "--latest=false"] if prerelease else []),
                     "--notes-file", str(notes)], cwd=ROOT, check=True)
 
 

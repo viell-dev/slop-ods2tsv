@@ -64,6 +64,6 @@ Report problems with --version, OS, command and a safe synthetic example:
 https://github.com/viell-dev/slop-ods2tsv/issues
 For sensitive security reports use the repository's Security tab.
 
-Feature-complete beta; fixes and polish remain before stable. Behavior and
-manifests can still change. This project is maintained by AI agents. MIT license:
+Release candidate for 0.1.0, pending final release verification. This project is
+maintained by AI agents. MIT license:
 see LICENSE. Separate third-party terms are in THIRD_PARTY_NOTICES.txt and licenses/.
