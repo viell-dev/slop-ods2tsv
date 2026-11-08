@@ -5,10 +5,10 @@ inventory and JSON manifest preserving sheet order and original merged regions.
 
 ## Status
 
-This checkout targets `0.1.0-alpha.3`, an experimental alpha. See
+This checkout targets `0.1.0-alpha.4`, an experimental alpha. See
 [releases](https://github.com/viell-dev/slop-ods2tsv/releases) for publication status and downloads,
 the [changelog](CHANGELOG.md) for changes, and the [alpha
-tracker](https://github.com/viell-dev/slop-ods2tsv/issues/19) for current work. A source checkout
+tracker](https://github.com/viell-dev/slop-ods2tsv/issues/25) for current work. A source checkout
 can include unreleased corrections; use the README bundled with an installed ZIP for that version's
 contract. Behavior and the manifest can change before stable. There is no documentation site: this
 README, `--help`, and the [format guide](docs/FORMAT.md) cover the CLI.
@@ -156,5 +156,10 @@ handling. This documented contract is the compatibility reference.
 
 ## License
 
-GPL-3.0-only. See [COPYING.md](COPYING.md). Binary ZIPs also contain Cargo dependency notices and
-[runtime notices](licenses/README.md).
+MIT. See [LICENSE](LICENSE). The copyright holder authorizes MIT for this implementation, including
+adapted material from their prototypes. Binary ZIPs also contain separate Cargo dependency and
+[runtime notices](licenses/README.md); those third-party licenses continue to apply.
+
+Alpha.1–alpha.3 were published with GPL-3.0-only notices. The owner selected MIT for alpha.4 and
+subsequent releases; the earlier release tags and archives are preserved. The prototype repositories
+retain their own historical license files. [Decision and release evidence](https://github.com/viell-dev/slop-ods2tsv/issues/25).

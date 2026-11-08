@@ -33,6 +33,8 @@ start a new local build with a fresh `dist/`.
 Include Cargo dependency texts, the pinned Rust standard-library inventory/license texts and target
 runtime notices described in [licenses/README.md](licenses/README.md). Updating Rust requires review
 of the linked musl version and notices; Cargo's graph does not describe the standard library.
+Archives include the application's MIT `LICENSE` separately from all third-party notices. The owner
+authorized MIT starting with alpha.4; preserve earlier tags/archives with their original notices.
 
 Run `python scripts/artifact.py <ZIP>` on the target OS. It verifies hashes, contents, extraction
 permissions and the installed executable's CLI/TSV/manifest corpus. Windows inspection rejects

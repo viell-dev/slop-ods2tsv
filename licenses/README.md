@@ -1,6 +1,7 @@
 # Binary runtime notices
 
-The application is GPL-3.0-only. Binary archives also include these third-party notices:
+The application is MIT-licensed; see [LICENSE](../LICENSE). Binary archives also include these
+third-party notices, whose separate terms remain in effect:
 
 - `THIRD_PARTY_NOTICES.txt`: license texts from the locked target's normal/build Cargo graph.
 - `rust/COPYRIGHT-library.html` and `rust/licenses/`: the pinned compiler distribution's standard

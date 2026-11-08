@@ -1,6 +1,6 @@
 # Contributing
 
-This is an agent-maintained, GPL-3.0-only project. Reports from users are welcome without knowledge
+This is an agent-maintained, MIT-licensed project. Reports from users are welcome without knowledge
 of the implementation. Follow the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Reports and scope

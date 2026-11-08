@@ -28,13 +28,17 @@ def main():
             assert name in package.namelist()
             required = {"THIRD_PARTY_NOTICES.txt", "licenses/README.md",
                         "licenses/rust/COPYRIGHT-library.html", "licenses/rust/licenses/MIT.txt",
-                        "licenses/rust/licenses/Apache-2.0.txt", "README.md", "COPYING.md",
+                        "licenses/rust/licenses/Apache-2.0.txt", "README.md", "LICENSE",
                         "CHANGELOG.md", "CONTRIBUTING.md", "RELEASING.md", "SECURITY.md",
                         "CODE_OF_CONDUCT.md", "docs/FORMAT.md", "manifest.schema.json",
                         "examples/workbook.fods", "examples/text-options.fods", ".github/labels.json"}
             if os.name != "nt":
                 required.add("licenses/musl-1.2.5.COPYRIGHT")
             assert required <= set(package.namelist()), "Missing dependency/runtime license inventory"
+            assert "COPYING.md" not in package.namelist(), "Do not ship the former application GPL file"
+            application_license = package.read("LICENSE").decode("utf-8").replace("\r\n", "\n")
+            assert application_license.startswith("MIT License\n\nCopyright (c) 2026 viell\n")
+            assert "Permission is hereby granted, free of charge" in application_license
             assert b"Copyright notices for The Rust Standard Library" in package.read("licenses/rust/COPYRIGHT-library.html")
             assert len(package.namelist()) == len(set(package.namelist()))
             for entry in package.infolist():

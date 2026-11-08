@@ -33,7 +33,7 @@ def main():
     notice_path = dist / f"{args.target}-THIRD_PARTY_NOTICES.txt"
     notice_path.write_text(notices(args.target), encoding="utf-8", newline="\n")
     files = [(binary_name, binary), ("THIRD_PARTY_NOTICES.txt", notice_path), *runtime_files(args.target)] + [(name, ROOT / name) for name in (
-        "README.md", "COPYING.md", "CHANGELOG.md", "CONTRIBUTING.md", "RELEASING.md", "SECURITY.md",
+        "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md", "RELEASING.md", "SECURITY.md",
         "docs/FORMAT.md", "manifest.schema.json", "examples/workbook.fods", "examples/text-options.fods", "CODE_OF_CONDUCT.md", ".github/labels.json",
     )]
     with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED) as package:
