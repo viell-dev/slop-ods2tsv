@@ -10,6 +10,7 @@ from validation import require
 
 EXCLUDED = {"artifacts", "target", "dist", "results", ".git", ".venv"}
 DESTINATION = r'(<[^>\n]+>|[^\s)]+)'
+QUOTE_MARKER = r" {0,3}>[ \t]?"
 
 
 def markdown_files(root):
@@ -20,20 +21,26 @@ def markdown_files(root):
                   if not EXCLUDED.intersection(path.relative_to(root).parts) and not path.is_symlink())
 
 
-def without_fences(text):
-    # Remove quote continuations before recognizing code fences or wrapped destinations.
-    text = re.sub(r'(?m)^ {0,3}(?:>[ \t]?)+', '', text)
+def markdown_prose(text):
+    """Omit fenced code and normalize quote prefixes for link/heading checks."""
     lines = []
     fence = None
+    depth = 0
     for line in text.splitlines():
-        match = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
+        prefix = re.match(f"(?:{QUOTE_MARKER})*", line)[0]
+        if fence and prefix.count(">") < depth:
+            fence = None
+        # Extra markers inside code are literal; only remove the opening fence's quote depth.
+        body = re.sub(f"^(?:{QUOTE_MARKER}){{{depth}}}", "", line) if fence else line[len(prefix):]
+        match = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", body)
         if fence:
-            if match and match[1][0] == fence[0] and len(match[1]) >= len(fence):
+            if match and match[1][0] == fence[0] and len(match[1]) >= len(fence) and not match[2].strip():
                 fence = None
         elif match:
             fence = match[1]
+            depth = prefix.count(">")
         else:
-            lines.append(line)
+            lines.append(body)
     return "\n".join(lines)
 
 
@@ -88,7 +95,7 @@ def local_links(text):
 
 def check_links(root):
     for source in markdown_files(root):
-        text = without_fences(source.read_text(encoding="utf-8"))
+        text = markdown_prose(source.read_text(encoding="utf-8"))
         for link in local_links(text):
             parts = urlsplit(link)
             if parts.scheme or parts.netloc:
@@ -98,5 +105,5 @@ def check_links(root):
             require(target.exists(), context + " (missing file)")
             if parts.fragment:
                 require(target.suffix.lower() == ".md", context + " (unsupported non-Markdown fragment)")
-                anchors = heading_anchors(without_fences(target.read_text(encoding="utf-8")))
+                anchors = heading_anchors(markdown_prose(target.read_text(encoding="utf-8")))
                 require(unquote(parts.fragment) in anchors, context + " (missing section)")

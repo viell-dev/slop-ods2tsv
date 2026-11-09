@@ -33,6 +33,21 @@ class MarkdownTest(unittest.TestCase):
         (self.root / "docs/guide.md").write_text('# Café: `value`\n## Repeat\n## Repeat\n<a id="custom"></a>\n', encoding="utf-8")
         (self.root / "research/nested").mkdir(parents=True)
 
+    def assert_link_shapes_checked(self, shapes):
+        for shape in shapes:
+            (self.root / "README.md").write_text(shape.format(target="docs/guide.md#repeat"),
+                                               encoding="utf-8")
+            with self.subTest(shape=shape, valid=True):
+                check_links(self.root)
+            for target, reason in (("absent.md", "missing file"),
+                                   ("docs/guide.md#absent", "missing section")):
+                (self.root / "README.md").write_text(shape.format(target=target), encoding="utf-8")
+                with self.subTest(shape=shape, target=target):
+                    with self.assertRaisesRegex(ValidationError, reason) as error:
+                        check_links(self.root)
+                    self.assertIn("README.md", str(error.exception))
+                    self.assertIn(target, str(error.exception))
+
     def test_existing_inline_reference_and_explicit_anchors(self):
         (self.root / "README.md").write_text(
             "# Start\n[Same](#start) [Other](docs/guide.md#caf%C3%A9-value)\n"
@@ -71,19 +86,7 @@ class MarkdownTest(unittest.TestCase):
             '[Title]({target} "Double-quoted title")',
             "[Title]({target} (Parenthesized title))",
         )
-        for shape in shapes:
-            valid = shape.format(target="docs/guide.md#repeat")
-            (self.root / "README.md").write_text(valid, encoding="utf-8")
-            with self.subTest(shape=shape, valid=True):
-                check_links(self.root)
-            for target, reason in (("absent.md", "missing file"),
-                                   ("docs/guide.md#absent", "missing section")):
-                (self.root / "README.md").write_text(shape.format(target=target), encoding="utf-8")
-                with self.subTest(shape=shape, target=target):
-                    with self.assertRaisesRegex(ValidationError, reason) as error:
-                        check_links(self.root)
-                    self.assertIn("README.md", str(error.exception))
-                    self.assertIn(target, str(error.exception))
+        self.assert_link_shapes_checked(shapes)
 
     def test_titles_and_blockquote_continuations_do_not_hide_destinations(self):
         shapes = (
@@ -95,22 +98,33 @@ class MarkdownTest(unittest.TestCase):
             '> [Title](\n> {target})',
             '> > [Title](\n> > {target}\n> > "wrapped\n> > title")',
         )
-        for shape in shapes:
-            (self.root / "README.md").write_text(shape.format(target="docs/guide.md#repeat"),
-                                               encoding="utf-8")
-            with self.subTest(shape=shape, valid=True):
+        self.assert_link_shapes_checked(shapes)
+
+    def test_fenced_examples_are_excluded(self):
+        examples = (
+            '```md\n[Ignored](ignored-example.md)\n```\n',
+            '> ```md\n> [Ignored](ignored-example.md)\n> ```\n',
+            '> > ~~~md\n> > [Ignored](ignored-example.md)\n> > ~~~\n',
+            '```md\n[Ignored](ignored-example.md)\n',
+        )
+        for text in examples:
+            with self.subTest(text=text):
+                (self.root / "README.md").write_text(text, encoding="utf-8")
                 check_links(self.root)
-            for target, reason in (("absent.md", "missing file"),
-                                   ("docs/guide.md#absent", "missing section")):
-                (self.root / "README.md").write_text(shape.format(target=target), encoding="utf-8")
-                with self.subTest(shape=shape, target=target):
-                    with self.assertRaisesRegex(ValidationError, reason) as error:
-                        check_links(self.root)
-                    self.assertIn("README.md", str(error.exception))
-                    self.assertIn(target, str(error.exception))
-        (self.root / "README.md").write_text('> ```md\n> [Ignored](absent.md)\n> ```\n',
-                                           encoding="utf-8")
-        check_links(self.root)
+
+    def test_real_links_after_fences_are_checked(self):
+        shapes = (
+            '```md\n[Ignored](ignored-example.md)\n```\n[Real]({target})\n',
+            '```sh\n$ cat <<EOF\n> ```\n> EOF\n```\n[Real]({target})\n',
+            '~~~\n> ~~~\n~~~\n[Real]({target})\n',
+            '> ```\n> code\n[Real]({target})\n',
+            '> ```\n> code\n\n[Real]({target})\n',
+            '> > ```\n> > code\n> [Real]({target})\n',
+            '> ```\n> > ```\n> ```\n> [Real]({target})\n',
+            '````md\n```\n[Ignored](ignored-example.md)\n````\n[Real]({target})\n',
+            '~~~md\n```\n[Ignored](ignored-example.md)\n~~~\n[Real]({target})\n',
+        )
+        self.assert_link_shapes_checked(shapes)
 
 
 class PackageTest(unittest.TestCase):
