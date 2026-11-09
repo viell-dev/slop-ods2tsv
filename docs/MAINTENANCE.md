@@ -42,9 +42,9 @@ The link inventory covers root Markdown and recursive `docs/`, `licenses/`, `res
 `.github/` Markdown, excluding generated `results/`, artifacts, targets, distributions, virtual
 environments and symlink files. Inline links/images and reference definitions support local files,
 same/cross-file heading fragments, percent-encoded targets, ATX/setext headings, duplicate heading
-suffixes and explicit HTML `id`/anchor `name`. Link text can wrap or contain brackets/images; titles
-can use double quotes, single quotes or parentheses. Fenced examples are excluded. External URLs
-are not fetched. This is a bounded Markdown check: embedded HTML links, JavaScript-generated
+suffixes and explicit HTML `id`/anchor `name`. Destination checks are independent of link text or
+titles, including wrapped/escaped titles and blockquote continuations. Fenced examples are excluded.
+External URLs are not fetched. This is a bounded Markdown check: embedded HTML links, JavaScript-generated
 anchors and non-Markdown fragments need manual review; unsupported non-Markdown fragments fail
 explicitly. Inline-code link examples are checked as links. Headings with underscore emphasis,
 tabs or non-decimal digits can produce false missing-section errors and need an explicit HTML

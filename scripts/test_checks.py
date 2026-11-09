@@ -85,6 +85,33 @@ class MarkdownTest(unittest.TestCase):
                     self.assertIn("README.md", str(error.exception))
                     self.assertIn(target, str(error.exception))
 
+    def test_titles_and_blockquote_continuations_do_not_hide_destinations(self):
+        shapes = (
+            '[Title]({target} "wrapped\ntitle")',
+            r'[Title]({target} "escaped \"quote\"")',
+            r"[Title]({target} 'escaped \'quote\'')",
+            r'[Title]({target} (escaped \(parentheses\)))',
+            '> [Title]({target}\n> )',
+            '> [Title](\n> {target})',
+            '> > [Title](\n> > {target}\n> > "wrapped\n> > title")',
+        )
+        for shape in shapes:
+            (self.root / "README.md").write_text(shape.format(target="docs/guide.md#repeat"),
+                                               encoding="utf-8")
+            with self.subTest(shape=shape, valid=True):
+                check_links(self.root)
+            for target, reason in (("absent.md", "missing file"),
+                                   ("docs/guide.md#absent", "missing section")):
+                (self.root / "README.md").write_text(shape.format(target=target), encoding="utf-8")
+                with self.subTest(shape=shape, target=target):
+                    with self.assertRaisesRegex(ValidationError, reason) as error:
+                        check_links(self.root)
+                    self.assertIn("README.md", str(error.exception))
+                    self.assertIn(target, str(error.exception))
+        (self.root / "README.md").write_text('> ```md\n> [Ignored](absent.md)\n> ```\n',
+                                           encoding="utf-8")
+        check_links(self.root)
+
 
 class PackageTest(unittest.TestCase):
     def setUp(self):
@@ -225,8 +252,8 @@ class RuntimeGateTest(unittest.TestCase):
             dumpbin.parent.mkdir(parents=True)
             dumpbin.touch()
             fake_os = SimpleNamespace(name="nt", environ={"ProgramFiles(x86)": str(root)})
-            for imports in ("unreviewed-runtime.dll\n", "no imports"):
-                diagnostic = "Unreviewed runtime dependencies" if ".dll" in imports else "no import table found"
+            for imports, diagnostic in (("unreviewed-runtime.dll\n", "Unreviewed runtime dependencies"),
+                                        ("no imports", "no import table found")):
                 with self.subTest(imports=imports), patch.object(dependencies, "os", fake_os), \
                      patch.object(dependencies.subprocess, "check_output", side_effect=[str(root), imports]), \
                      patch.object(dependencies.subprocess, "run") as launch, \
@@ -239,8 +266,8 @@ class RuntimeGateTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "rust-toolchain.toml").write_text('[toolchain]\nchannel = "1.99.1"\n', encoding="utf-8")
-            for compiler in ("rustc 0.0.0 (synthetic)", "rustc 1.99.1 (synthetic)"):
-                diagnostic = "Unexpected compiler" if "0.0.0" in compiler else "copyright inventory is required"
+            for compiler, diagnostic in (("rustc 0.0.0 (synthetic)", "Unexpected compiler"),
+                                         ("rustc 1.99.1 (synthetic)", "copyright inventory is required")):
                 with self.subTest(compiler=compiler), patch.object(licenses, "ROOT", root), \
                      patch.object(licenses.subprocess, "check_output", side_effect=[compiler, str(root)]):
                     with self.assertRaisesRegex(ValidationError, diagnostic):

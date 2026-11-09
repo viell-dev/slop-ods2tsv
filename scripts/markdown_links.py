@@ -9,7 +9,7 @@ from validation import require
 
 
 EXCLUDED = {"artifacts", "target", "dist", "results", ".git", ".venv"}
-DESTINATION = r'''(<[^>\n]+>|[^\s)]+)(?:\s+(?:"[^"\n]*"|'[^'\n]*'|\([^()\n]*\)))?'''
+DESTINATION = r'(<[^>\n]+>|[^\s)]+)'
 
 
 def markdown_files(root):
@@ -21,6 +21,8 @@ def markdown_files(root):
 
 
 def without_fences(text):
+    # Remove quote continuations before recognizing code fences or wrapped destinations.
+    text = re.sub(r'(?m)^ {0,3}(?:>[ \t]?)+', '', text)
     lines = []
     fence = None
     for line in text.splitlines():
@@ -76,8 +78,8 @@ def heading_anchors(text):
 
 
 def local_links(text):
-    # The closing bracket is sufficient: link text can wrap or contain brackets/images.
-    for match in re.finditer(r'\]\(\s*' + DESTINATION + r'\s*\)', text):
+    # Read only the destination; link text, titles and closing syntax are separate.
+    for match in re.finditer(r'\]\(\s*' + DESTINATION, text):
         yield match[1].strip("<>")
     # Checking every definition also covers shortcut and collapsed reference links.
     for match in re.finditer(r'^ {0,3}\[[^]\n]+\]:\s*' + DESTINATION, text, re.M):

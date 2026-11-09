@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.2
+
+Preserve local documentation link checks across wrapped/escaped titles and blockquote
+continuations by extracting destinations independently of titles. Add positive and negative
+regression controls, show the forced-locale Windows contributor check and tidy maintenance
+documentation/tests. Converter behavior, CLI options, dependencies, toolchain, portable ZIP
+inventory and manifest schema-1 meanings are unchanged. Existing human usability and performance
+evidence remains representative; unsigned Windows device-policy limits still apply.
+[Maintenance and release verification](https://github.com/viell-dev/slop-ods2tsv/issues/58).
+
 ## 0.1.1
 
 Harden release and verification checks so Python optimization cannot disable branch, commit, CI,

@@ -59,8 +59,12 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe -m unittest discover -s scripts -p "test_*.py"
 .\.venv\Scripts\python.exe -O -m unittest discover -s scripts -p "test_*.py"
+.\.venv\Scripts\python.exe -X utf8=0 -O -m unittest discover -s scripts -p "test_*.py"
 .\.venv\Scripts\python.exe scripts/check.py --binary target/debug/ods2tsv.exe
 ```
+
+The forced locale-encoding run matches Windows CI even when Python defaults to UTF-8. It catches
+fixtures that accidentally rely on the machine's text encoding.
 
 Linux (install your distribution's `python3-venv` package if venv is unavailable):
 
