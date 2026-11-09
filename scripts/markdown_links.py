@@ -29,6 +29,7 @@ def markdown_prose(text):
     for line in text.splitlines():
         prefix = re.match(f"(?:{QUOTE_MARKER})*", line)[0]
         if fence and prefix.count(">") < depth:
+            # Leaving the containing quote also ends its unclosed fenced block.
             fence = None
         # Extra markers inside code are literal; only remove the opening fence's quote depth.
         body = re.sub(f"^(?:{QUOTE_MARKER}){{{depth}}}", "", line) if fence else line[len(prefix):]
@@ -36,7 +37,8 @@ def markdown_prose(text):
         if fence:
             if match and match[1][0] == fence[0] and len(match[1]) >= len(fence) and not match[2].strip():
                 fence = None
-        elif match:
+        elif match and (match[1][0] != "`" or "`" not in match[2]):
+            # Backtick-fence info cannot contain backticks (CommonMark 0.31.2, section 4.5).
             fence = match[1]
             depth = prefix.count(">")
         else:

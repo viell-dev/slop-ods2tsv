@@ -97,6 +97,9 @@ class MarkdownTest(unittest.TestCase):
             '> [Title]({target}\n> )',
             '> [Title](\n> {target})',
             '> > [Title](\n> > {target}\n> > "wrapped\n> > title")',
+            ' >[Title](\n >{target})',
+            '  > [Title](\n  > {target})',
+            '   > [Title](\n   > {target})',
         )
         self.assert_link_shapes_checked(shapes)
 
@@ -106,6 +109,7 @@ class MarkdownTest(unittest.TestCase):
             '> ```md\n> [Ignored](ignored-example.md)\n> ```\n',
             '> > ~~~md\n> > [Ignored](ignored-example.md)\n> > ~~~\n',
             '```md\n[Ignored](ignored-example.md)\n',
+            '~~~a~b`c~~~ d\n[Ignored](ignored-example.md)\n~~~\n',
         )
         for text in examples:
             with self.subTest(text=text):
@@ -123,6 +127,16 @@ class MarkdownTest(unittest.TestCase):
             '> ```\n> > ```\n> ```\n> [Real]({target})\n',
             '````md\n```\n[Ignored](ignored-example.md)\n````\n[Real]({target})\n',
             '~~~md\n```\n[Ignored](ignored-example.md)\n~~~\n[Real]({target})\n',
+            '```md\n```sh\n[Ignored](ignored-example.md)\n```\n[Real]({target})\n',
+        )
+        self.assert_link_shapes_checked(shapes)
+
+    def test_real_links_after_inline_backticks_are_checked(self):
+        shapes = (
+            '```a`b``` c\n\n```x`y``` z\n\n[Real]({target})\n',
+            '> ```a`b``` c\n> [Real]({target})\n',
+            '```a`b``` c\n[Real]({target})\n',
+            '```a`b``` c\n\n```x`y``` z\n\n[Real][r]\n\n[r]: {target}\n',
         )
         self.assert_link_shapes_checked(shapes)
 

@@ -53,6 +53,9 @@ example. Headings with underscore emphasis, tabs or non-decimal digits can produ
 missing-section errors and need an explicit HTML anchor when linked. Keep new maintained Markdown
 inside the inventory or extend it in the same PR.
 
+List-item fences and a tab between a quote marker and a fence are outside this bounded block
+model; they can hide later destinations and need manual review. List parsing is not implemented.
+
 ## Label maintenance
 
 `.github/labels.json` owns Type, Status, Needs and contribution labels. `accessibility` is an
