@@ -18,10 +18,21 @@ assigned to the person who must act, using only one Needs label. Optional feedba
 
 ## Build and checks
 
-Clone this repository and run commands from its root. Install rustup and native build tools.
-The repository pins its compiler, rustfmt, Clippy and
-rust-analyzer. Use a task branch from `main`. Rust tests and the converter need no Python or
-LibreOffice installation.
+Reporting a problem needs no build setup. To contribute code, clone this repository, use a task
+branch from `main` and run commands from its root. Install Git and
+[rustup](https://www.rust-lang.org/tools/install). The repository pins the compiler, rustfmt,
+Clippy and rust-analyzer in `rust-toolchain.toml`; `rustup toolchain install` installs that selection.
+
+- Windows x86-64: install the MSVC C++ build tools and a Windows SDK using
+  [Rustup's prerequisites](https://rust-lang.github.io/rustup/installation/windows-msvc.html).
+  Use **Developer PowerShell for Visual Studio** targeting x64 when the linker, libraries or SDK
+  are not exposed in an ordinary shell. This supplies the session's PATH/LIB/INCLUDE; do not change
+  machine-wide paths to repair a single build session.
+- Linux: install the native C linker/build tools (Debian/Ubuntu: `sudo apt-get install build-essential`)
+  and use the default native Rust target. musl cross-target tools are only needed for release ZIPs.
+
+The following Cargo commands work on both platforms. Rust tests and the converter need no Python
+or LibreOffice installation.
 
 ```sh
 cargo build --locked
@@ -29,6 +40,7 @@ cargo fmt --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked
 cargo bench --locked --no-run
+cargo doc --locked --no-deps
 ```
 
 Tests construct synthetic ODS/FODS, launch CLI processes, check exact TSV/metadata, exercise XML
@@ -36,19 +48,35 @@ encodings/EOF, and compare generated compact grids with simple reference results
 needs explicit expectations and reproduced defects need regression cases. Preserve failing inputs
 and seeds; never retry randomly until green. Required suites fail when fixtures are missing.
 
-Python 3.11+ supports schema, docs and artifact checks. In an isolated environment:
+Install [Python 3.11+](https://www.python.org/downloads/) for schema, docs and artifact checks.
+Create a disposable virtual environment; these commands use its interpreter directly, so shell
+activation and execution-policy changes are unnecessary. Windows Developer PowerShell:
 
-```sh
-python -m pip install -r requirements-dev.txt
-python scripts/test_release.py
-python scripts/check.py --binary target/debug/ods2tsv
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m unittest discover -s scripts -p "test_*.py"
+.\.venv\Scripts\python.exe -O -m unittest discover -s scripts -p "test_*.py"
+.\.venv\Scripts\python.exe scripts/check.py --binary target/debug/ods2tsv.exe
 ```
 
-Use `.exe` on Windows. After intentionally changing help, add `--write-help`, review the README
-diff, and rerun without it. CI checks actual help, version, generated schema-conforming manifests
-and local Markdown file links. Update public prose/examples with behavior changes and wrap prose
-at 100 columns. A documentation site is not required. Coverage reports expose gaps; percentages
-alone do not establish correctness.
+Linux (install your distribution's `python3-venv` package if venv is unavailable):
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m unittest discover -s scripts -p 'test_*.py'
+.venv/bin/python -O -m unittest discover -s scripts -p 'test_*.py'
+.venv/bin/python scripts/check.py --binary target/debug/ods2tsv
+```
+
+Use the [maintenance checklist](docs/MAINTENANCE.md) for every affected documentation surface,
+automated check and semantic review, including PORTABLE and SECURITY. Wrap prose at 100 columns.
+CI checks actual help/version, generated schema-conforming manifests and local Markdown files and
+sections; it does not validate arbitrary prose. A documentation site is not required. Coverage
+reports expose gaps; percentages alone do not establish correctness. Delete `.venv` to remove
+the development environment. Optional benchmarks, Calc and release tools are described below and
+in [RELEASING.md](RELEASING.md), separately from the ordinary build/test path.
 The release suite uses synthetic archives and simulated external command results to verify channel
 selection, notes and failure gates without publishing. It complements actual workflow/download
 verification; it is not evidence of GitHub's live behavior by itself.

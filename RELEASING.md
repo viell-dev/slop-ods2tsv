@@ -16,6 +16,9 @@ the [stable tracker](https://github.com/viell-dev/slop-ods2tsv/issues/38) owns r
 normal release-channel verification. The tracker and preparation PR retain scope, exact commit,
 checks/results, benchmark method, platform evidence, review findings and remaining limits.
 Each version's changelog entry links its own tracker; that entry becomes its release notes.
+For subsequent patches, record the changes and evidence reuse assessment in that patch's tracker
+and PR. Use the [documentation maintenance checklist](docs/MAINTENANCE.md) for version, channel,
+support, portable-guide and semantic synchronization; its check boundaries apply to releases too.
 
 Every release PR gets independent agent review of all changes since the previous release, plus
 author review after checks pass. Record the reviewed revision and verify material fixes. Required
@@ -30,8 +33,10 @@ their results and limits; neither is silently described as a performance or conv
 
 ## Build and verify
 
-Build on each target OS with the pinned compiler, native linker/SDK and Python 3.11+ development
-requirements. Run only the applicable command:
+Complete the platform-specific [contributor setup](CONTRIBUTING.md#build-and-checks), including
+the pinned compiler, native linker/SDK and Python virtual environment. The commands below use
+`python` to mean that environment's interpreter; use `.\.venv\Scripts\python.exe` on Windows or
+`.venv/bin/python` on Linux when it is not activated. Run only the applicable command:
 
 ```sh
 python scripts/package.py --target x86_64-pc-windows-msvc
@@ -43,6 +48,8 @@ from Windows. Windows needs its C++/SDK toolchain. Release-only static CRT flags
 child process, not global settings. ZIPs contain only the executable, rendered `docs/PORTABLE.txt`
 as `README.txt`, application `LICENSE`, and the complete third-party/runtime notices. The portable
 guide links to release-tagged reference/schema/examples; developer documents stay in the repository.
+`release_metadata.py` renders stable/alpha/beta/RC status from the Cargo version; never hard-code
+the channel in the template. Archive verification compares the complete rendered guide.
 Preserve Linux executable permissions; each ZIP has a SHA-256 file. Archives are not overwritten:
 start a new local build with a fresh `dist/`.
 
@@ -72,14 +79,18 @@ and tested before a separate minimally privileged job creates the release with n
 The [publisher](https://github.com/viell-dev/slop-ods2tsv/issues/38) marks alpha/beta/RC as
 prereleases and never Latest. Stable versions use the normal release channel and GitHub's automatic
 Latest selection. Notes identify the correct channel. All branch/commit/CI/tag/archive/checksum
-gates apply to either path; `python scripts/test_release.py` checks both paths and failure cases
+gates apply to either path; `python -m unittest discover -s scripts -p 'test_*.py'` and the same
+command with `python -O` check both paths and failure cases
 without real Git/GitHub calls. A dry run writes eligibility output without publishing or notes.
 
-Before stable promotion, record comparison with the chosen RC: converter source, dependencies,
+Before the first stable promotion, record comparison with the chosen RC: converter source, dependencies,
 toolchain and packaging scripts must be unchanged. Version/documentation metadata can identify the
 final release; rebuild and verify those actual downloads rather than claiming RC byte identity.
 Material changes need another RC. Record the agreed goal, representative human evidence and any
 remaining finding dispositions in the stable preparation PR before dispatching publication.
+Later routine patches can reuse representative human evidence with a recorded assessment; a new
+human pass is required after substantial interface or main-workflow changes. Scale candidate and
+benchmark checks to changed behavior, retaining existing evidence only while its assumptions hold.
 
 After publication verify the tag's commit, download assets, compare hashes/file lists, and execute
 the actual downloads on Windows and Linux. Record release links, run IDs and verification in the

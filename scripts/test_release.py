@@ -104,14 +104,14 @@ class ReleaseTest(unittest.TestCase):
         self.fixture("0.1.0-rc.1")
         for version in ("v0.1.0", "0.1", "0.1.0-dev.1", "01.0.0", "0.1.0-rc.01", "0.1.0+build"):
             (self.root / "Cargo.toml").write_text(f'[package]\nversion = "{version}"\n')
-            with self.subTest(version=version), self.assertRaisesRegex(AssertionError, "Unsupported release version"):
+            with self.subTest(version=version), self.assertRaisesRegex(ValueError, "Unsupported release version"):
                 self.invoke()
             self.assertFalse(self.calls)
 
     def test_wrong_branch_or_commit_cannot_publish(self):
         self.fixture("0.1.0-rc.1")
         for arguments in ({"ref": "refs/heads/topic"}, {"environment_sha": "b" * 40}):
-            with self.subTest(arguments=arguments), self.assertRaises(AssertionError):
+            with self.subTest(arguments=arguments), self.assertRaises(ValueError):
                 self.invoke(**arguments)
             self.assertFalse(self.calls)
 
@@ -121,14 +121,14 @@ class ReleaseTest(unittest.TestCase):
                      [{"name": "CI", "head_sha": SHA, "conclusion": "failure"}],
                      [{"name": "Other", "head_sha": SHA, "conclusion": "success"}]):
             self.ci_runs = runs
-            with self.subTest(runs=runs), self.assertRaisesRegex(AssertionError, "Exact main commit"):
+            with self.subTest(runs=runs), self.assertRaisesRegex(ValueError, "Exact main commit"):
                 self.invoke()
             self.assertFalse(self.calls)
 
     def test_existing_tag_cannot_be_replaced(self):
         self.fixture("0.1.0-rc.1")
         self.existing_tag = True
-        with self.assertRaisesRegex(AssertionError, "Tag already exists"):
+        with self.assertRaisesRegex(ValueError, "Tag already exists"):
             self.invoke()
         self.assertFalse(self.calls)
 
@@ -137,12 +137,12 @@ class ReleaseTest(unittest.TestCase):
         first, *_ = (self.root / "dist").glob("*.zip")
         original = first.read_bytes()
         first.unlink()
-        with self.subTest(case="missing"), self.assertRaisesRegex(AssertionError, "Missing or unexpected"):
+        with self.subTest(case="missing"), self.assertRaisesRegex(ValueError, "Missing or unexpected"):
             self.invoke()
         self.assertFalse(self.calls)
         first.write_bytes(original)
         first.with_name("unexpected.zip").write_bytes(original)
-        with self.subTest(case="unexpected"), self.assertRaisesRegex(AssertionError, "Missing or unexpected"):
+        with self.subTest(case="unexpected"), self.assertRaisesRegex(ValueError, "Missing or unexpected"):
             self.invoke()
         self.assertFalse(self.calls)
 
@@ -152,14 +152,14 @@ class ReleaseTest(unittest.TestCase):
         original = first.read_text()
         for content in ("0" * 64 + original[64:], original.replace("ods2tsv-", "other-")):
             first.write_text(content)
-            with self.subTest(content=content), self.assertRaises(AssertionError):
+            with self.subTest(content=content), self.assertRaises(ValueError):
                 self.invoke()
             self.assertFalse(self.calls)
 
     def test_missing_release_notes_cannot_publish(self):
         self.fixture("0.1.0-rc.1")
         (self.root / "CHANGELOG.md").write_text("# No entry\n")
-        with self.assertRaisesRegex(AssertionError, "No changelog entry"):
+        with self.assertRaisesRegex(ValueError, "No changelog entry"):
             self.invoke()
         self.assertFalse(self.calls)
 

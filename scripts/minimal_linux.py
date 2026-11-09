@@ -9,6 +9,8 @@ import tempfile
 
 from check import ROOT
 
+from validation import require
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -23,12 +25,12 @@ def main():
         subprocess.run(command, check=True, timeout=120)
         output = Path(directory) / "export"
         manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
-        assert [sheet["name"] for sheet in manifest["sheets"]] == ["Zeta", "Empty"]
-        assert manifest["sheets"][0]["columns"] == 2
-        assert len(manifest["sheets"][0]["merged_ranges"]) == 1
+        require([sheet["name"] for sheet in manifest["sheets"]] == ["Zeta", "Empty"], 'Sheet names or workbook order differ')
+        require(manifest["sheets"][0]["columns"] == 2, 'Exported column count differs')
+        require(len(manifest["sheets"][0]["merged_ranges"]) == 1, 'Original merged geometry differs')
         with (output / "Zeta.tsv").open(encoding="utf-8", newline="") as stream:
-            assert list(csv.reader(stream, delimiter="\t")) == [["0007", "0007"]]
-        assert (output / "Empty.tsv").read_bytes() == b""
+            require(list(csv.reader(stream, delimiter="\t")) == [["0007", "0007"]], 'TSV cell values differ')
+        require((output / "Empty.tsv").read_bytes() == b"", 'Empty sheet must have a zero-byte TSV')
     print("Verified complete export in Alpine 3.23 with network disabled and no language runtime.")
 
 

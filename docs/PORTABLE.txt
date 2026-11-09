@@ -64,6 +64,7 @@ Report problems with --version, OS, command and a safe synthetic example:
 https://github.com/viell-dev/slop-ods2tsv/issues
 For sensitive security reports use the repository's Security tab.
 
-Stable release for the documented Windows/Linux portable CLI. This project is
+@RELEASE_STATUS@
+This project is
 maintained by AI agents. MIT license:
 see LICENSE. Separate third-party terms are in THIRD_PARTY_NOTICES.txt and licenses/.

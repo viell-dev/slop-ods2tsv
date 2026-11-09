@@ -3,23 +3,6 @@
 A portable CLI for saved OpenDocument spreadsheet values: one TSV per sheet, with a readable
 inventory and JSON manifest preserving sheet order and original merged regions.
 
-## Status
-
-This checkout targets `0.1.0`, the first stable version for the agreed Windows/Linux portable CLI. See
-[releases](https://github.com/viell-dev/slop-ods2tsv/releases) for publication status and downloads,
-the [changelog](CHANGELOG.md) for changes, and the [release
-tracker](https://github.com/viell-dev/slop-ods2tsv/issues/38) for current work. A source checkout
-can include unreleased corrections; use `README.txt` bundled with an installed ZIP for that version's
-contract. The [release candidate](https://github.com/viell-dev/slop-ods2tsv/issues/40) is verified;
-this promotion changes release metadata and documentation only.
-The [stable goal](https://github.com/viell-dev/slop-ods2tsv/issues/21) is agreed and the current
-[human usability feedback](https://github.com/viell-dev/slop-ods2tsv/issues/22) is handled. There is
-no documentation site: this README, `--help`, and the [format guide](docs/FORMAT.md) cover the CLI.
-
-This project is written and maintained by AI agents, and no person reviews the code. Tests, CI,
-author review, and proportionate independent agent review provide engineering evidence. A person
-must try a representative candidate before the first stable release.
-
 ## Install update and remove
 
 Download a ZIP and its matching `.sha256` file from
@@ -42,6 +25,20 @@ CI executes Windows binaries on hosted Windows runners and Linux musl binaries o
 Alpine. Other architectures are not verified. Windows executables are unsigned: device
 Application Control can block them. Do not bypass security policy; report the exact policy error
 or use an environment that permits execution. Hosted CI cannot establish a managed laptop's policy.
+
+For a first export, use a saved workbook in a writable directory:
+
+```powershell
+.\ods2tsv.exe --output exported workbook.ods
+```
+
+On Linux use `./ods2tsv --output exported workbook.ods`. The new `exported/` directory contains
+one TSV per sheet, an ordered `README.txt` inventory and `manifest.json`. The destination must not
+already exist. The [format guide](docs/FORMAT.md) explains values, coordinates and recovery.
+
+The newest stable line is supported; see [SECURITY.md](SECURITY.md#supported-versions) for patch
+and prerelease support. [Release notes](CHANGELOG.md) describe changes. Source checkouts can
+include unreleased corrections; the guide bundled with a ZIP describes that installed version.
 
 ## Use
 
@@ -178,6 +175,12 @@ acceptance.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for builds, tests, benchmarks and defect reports,
 [SECURITY.md](SECURITY.md) for vulnerabilities, [RELEASING.md](RELEASING.md) for publication,
 and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for participation.
+
+This project is written and maintained by AI agents, and no person reviews the code. Tests, CI,
+author review and independent agent review provide engineering evidence. The agreed
+[stable scope](https://github.com/viell-dev/slop-ods2tsv/issues/21) and representative
+[human usability reports](https://github.com/viell-dev/slop-ods2tsv/issues/22) are recorded separately.
+The README, `--help` and format guide cover this CLI; no documentation site is required.
 
 The separate [Python](https://github.com/viell-dev/ods_to_tsv.py) and
 [Rust](https://github.com/viell-dev/ods2tsv/tree/llm1) prototypes supplied behavioral references

@@ -16,10 +16,17 @@ const TEXT: &str = "urn:oasis:names:tc:opendocument:xmlns:text:1.0";
 const DRAW: &str = "urn:oasis:names:tc:opendocument:xmlns:drawing:1.0";
 const CALCEXT: &str = "urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0";
 
+/// Preference between saved paragraphs and typed attributes; neither recalculates formulas.
+///
+/// LibreOffice-marked cached errors prefer nonblank error paragraphs in either mode, falling back
+/// to a nonblank typed attribute. Missing saved formula results become empty values with warnings.
+/// Explicitly saved empty ordinary results remain valid. Whitespace selection is independent.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ValueMode {
+    /// Prefer saved paragraphs, including explicitly empty paragraphs; fall back to typed attributes.
     #[default]
     SavedText,
+    /// Prefer stored unlocalized typed attributes; fall back to saved paragraphs.
     Raw,
 }
 
