@@ -27,34 +27,34 @@ class MarkdownTest(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
-        (self.root / "README.md").write_text("# Start\n")
+        (self.root / "README.md").write_text("# Start\n", encoding="utf-8")
         (self.root / "docs").mkdir()
-        (self.root / "docs/guide.md").write_text('# Café: `value`\n## Repeat\n## Repeat\n<a id="custom"></a>\n')
+        (self.root / "docs/guide.md").write_text('# Café: `value`\n## Repeat\n## Repeat\n<a id="custom"></a>\n', encoding="utf-8")
         (self.root / "research/nested").mkdir(parents=True)
 
     def test_existing_inline_reference_and_explicit_anchors(self):
         (self.root / "README.md").write_text(
             "# Start\n[Same](#start) [Other](docs/guide.md#caf%C3%A9-value)\n"
             "[Repeated][guide]\n[guide]: docs/guide.md#repeat-1\n"
-            "[Custom](docs/guide.md#custom)\n```md\n[Ignored](absent.md)\n```\n")
+            "[Custom](docs/guide.md#custom)\n```md\n[Ignored](absent.md)\n```\n", encoding="utf-8")
         check_links(self.root)
 
     def test_each_missing_file_or_section_reports_source_and_target(self):
         for target in ("absent.md", "docs/guide.md#absent", "#absent"):
             with self.subTest(target=target):
-                (self.root / "README.md").write_text(f"# Start\n[Broken]({target})\n")
+                (self.root / "README.md").write_text(f"# Start\n[Broken]({target})\n", encoding="utf-8")
                 with self.assertRaisesRegex(ValueError, "README.md") as error:
                     check_links(self.root)
                 self.assertIn(target, str(error.exception))
 
     def test_nested_research_is_checked_but_generated_results_are_excluded(self):
         nested = self.root / "research/nested/README.md"
-        nested.write_text("[Broken](absent.md)\n")
+        nested.write_text("[Broken](absent.md)\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "nested.*README.md.*absent.md"):
             check_links(self.root)
-        nested.write_text("# Research\n")
+        nested.write_text("# Research\n", encoding="utf-8")
         (self.root / "research/results").mkdir()
-        (self.root / "research/results/generated.md").write_text("[Ignored](absent.md)")
+        (self.root / "research/results/generated.md").write_text("[Ignored](absent.md)", encoding="utf-8")
         check_links(self.root)
 
     def test_duplicate_and_setext_heading_ids(self):
@@ -78,10 +78,10 @@ class PackageTest(unittest.TestCase):
                            ("licenses/Apache-2.0.txt", "Synthetic Apache fixture")):
             path = self.root / "licenses/rust" / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(text)
+            path.write_text(text, encoding="utf-8")
 
     def build_fixture(self):
-        (self.root / "Cargo.toml").write_text(f'[package]\nversion = "{self.version}"\n')
+        (self.root / "Cargo.toml").write_text(f'[package]\nversion = "{self.version}"\n', encoding="utf-8")
         binary_name = "ods2tsv.exe" if self.target.endswith("msvc") else "ods2tsv"
         binary = self.root / "target" / self.target / "release" / binary_name
         binary.parent.mkdir(parents=True, exist_ok=True)
@@ -137,7 +137,7 @@ class PackageTest(unittest.TestCase):
                         artifact.verify_contents(candidate, name, self.version)
 
     def test_mismatching_template_and_unknown_versions_fail(self):
-        template = (self.root / "docs/PORTABLE.txt").read_text()
+        template = (self.root / "docs/PORTABLE.txt").read_text(encoding="utf-8")
         for invalid in (template.replace("@RELEASE_STATUS@", "Stable release"), template + " @UNKNOWN@"):
             with self.assertRaises(ValueError):
                 portable_guide(invalid, "0.1.2-alpha.1")
@@ -146,7 +146,7 @@ class PackageTest(unittest.TestCase):
 
     def test_checksum_rejection_precedes_any_binary_launch(self):
         archive, _ = self.build_fixture()
-        archive.with_suffix(".zip.sha256").write_text("0" * 64 + "  wrong.zip\n", newline="\n")
+        archive.with_suffix(".zip.sha256").write_text("0" * 64 + "  wrong.zip\n", newline="\n", encoding="utf-8")
         with patch.object(artifact.subprocess, "run") as launch, patch("sys.argv", ["artifact.py", str(archive)]):
             with self.assertRaisesRegex(ValueError, "checksum"):
                 artifact.main()
@@ -209,7 +209,7 @@ class RuntimeGateTest(unittest.TestCase):
     def test_missing_runtime_inventory_and_wrong_compiler_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "rust-toolchain.toml").write_text('[toolchain]\nchannel = "1.99.1"\n')
+            (root / "rust-toolchain.toml").write_text('[toolchain]\nchannel = "1.99.1"\n', encoding="utf-8")
             for compiler in ("rustc 0.0.0 (synthetic)", "rustc 1.99.1 (synthetic)"):
                 with self.subTest(compiler=compiler), patch.object(licenses, "ROOT", root), \
                      patch.object(licenses.subprocess, "check_output", side_effect=[compiler, str(root)]):
@@ -230,7 +230,7 @@ class RuntimeGateTest(unittest.TestCase):
                     data["packages"][1]["license"] = "MIT"
                 if case == "escape":
                     outside = Path(directory) / "outside.txt"
-                    outside.write_text("Synthetic")
+                    outside.write_text("Synthetic", encoding="utf-8")
                     data["packages"][1]["license_file"] = str(outside)
                 with self.subTest(case=case), patch.object(licenses.subprocess, "check_output", return_value=json.dumps(data)):
                     with self.assertRaises(ValueError):
