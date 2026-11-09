@@ -43,12 +43,15 @@ The link inventory covers root Markdown and recursive `docs/`, `licenses/`, `res
 environments and symlink files. Inline links/images and reference definitions support local files,
 same/cross-file heading fragments, percent-encoded targets, ATX/setext headings, duplicate heading
 suffixes and explicit HTML `id`/anchor `name`. Destination checks are independent of link text or
-titles, including wrapped/escaped titles and blockquote continuations. Fenced examples are excluded.
-External URLs are not fetched. This is a bounded Markdown check: embedded HTML links, JavaScript-generated
-anchors and non-Markdown fragments need manual review; unsupported non-Markdown fragments fail
-explicitly. Inline-code link examples are checked as links. Headings with underscore emphasis,
-tabs or non-decimal digits can produce false missing-section errors and need an explicit HTML
-anchor when linked. Keep new maintained Markdown inside the inventory or extend it in the same PR.
+titles, including wrapped/escaped titles and blockquote continuations indented at most three
+columns per quote marker. Fenced examples are excluded; their opening quote depth is retained so
+literal quote markers inside code cannot hide later links. External URLs are not fetched. This is
+a bounded Markdown check: embedded HTML links, JavaScript-generated anchors, deeper list/quote
+indentation and non-Markdown fragments need manual review; unsupported non-Markdown fragments fail
+explicitly. Destination-like text is checked even with an unterminated title or in an inline-code
+example. Headings with underscore emphasis, tabs or non-decimal digits can produce false
+missing-section errors and need an explicit HTML anchor when linked. Keep new maintained Markdown
+inside the inventory or extend it in the same PR.
 
 ## Label maintenance
 
