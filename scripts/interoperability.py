@@ -10,6 +10,8 @@ import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 
+from validation import require
+
 
 def calc_import(soffice, profile, source, expected, directory):
     """Use Calc's real text importer; compare its saved/reopened text projection."""
@@ -26,13 +28,13 @@ def calc_import(soffice, profile, source, expected, directory):
     subprocess.run([soffice, profile, "--headless", "--infilter=Text - txt - csv (StarCalc):" + settings,
                     "--convert-to", "ods", "--outdir", str(imported), str(source)], check=True, timeout=120)
     workbook = imported / (source.stem + ".ods")
-    assert workbook.is_file(), "Calc import did not produce an ODS"
+    require(workbook.is_file(), "Calc import did not produce an ODS")
     subprocess.run([soffice, profile, "--headless", "--convert-to",
                     "csv:Text - txt - csv (StarCalc):9,34,76,1,,0,false,true,true,false,false,0,false,false,false",
                     "--outdir", str(reread), str(workbook)], check=True, timeout=120)
     with (reread / (source.stem + ".csv")).open(encoding="utf-8-sig", newline="") as stream:
         actual = list(csv.reader(stream, delimiter="\t"))
-    assert actual == expected, f"Calc import/re-read changed TSV values: {actual!r} != {expected!r}"
+    require(actual == expected, f"Calc import/re-read changed TSV values: {actual!r} != {expected!r}")
 
 
 def main():
@@ -68,7 +70,7 @@ def main():
                    "--convert-to", "ods", "--outdir", str(saved), str(source)]
         subprocess.run(command, check=True, timeout=120)
         ods = saved / "source.ods"
-        assert ods.is_file(), "LibreOffice returned without producing the expected file"
+        require(ods.is_file(), "LibreOffice returned without producing the expected file")
         expected = [["M", "M", "café"], ["line1\nline2", "A\tB", '"quoted"'],
                     ["a\t b", "a  b", "a\n b"], ["a\n  b", "x  y\nz", "x  y"],
                     ["#DIV/0!", "#N/A", ""],
@@ -89,8 +91,8 @@ def main():
             print("Calc emitted a literal paragraph-leading space; applying the ODF paragraph-edge rule.")
         compatibility_cells = tree.findall(f".//{table_ns}table-row")[3].findall(f"{table_ns}table-cell")[:3]
         paragraph_texts = [["".join(p.itertext()) for p in cell.findall(f"{text_ns}p")] for cell in compatibility_cells]
-        assert paragraph_texts == [["a", "  b"], ["x  y", "z"], ["x  y"]], f"Calc serialization changed: {paragraph_texts!r}"
-        assert all(not cell.findall(f".//{text_ns}s") for cell in compatibility_cells), "Review changed Calc whitespace encoding"
+        require(paragraph_texts == [["a", "  b"], ["x  y", "z"], ["x  y"]], f"Calc serialization changed: {paragraph_texts!r}")
+        require(all(not cell.findall(f".//{text_ns}s") for cell in compatibility_cells), "Review changed Calc whitespace encoding")
         saved_expected[3] = ["a\nb", "x y\nz", "x y"]
         csv_output = temporary / "calc-reread"
         csv_output.mkdir()
@@ -98,22 +100,22 @@ def main():
                         "--convert-to", "csv:Text - txt - csv (StarCalc):9,34,76", "--outdir", str(csv_output), str(ods)], check=True, timeout=120)
         with (csv_output / "source.csv").open(encoding="utf-8-sig", newline="") as stream:
             calc_rows = list(csv.reader(stream, delimiter="\t"))
-        assert calc_rows[3] == expected[3], f"Calc re-read changed: {calc_rows[3]!r}"
+        require(calc_rows[3] == expected[3], f"Calc re-read changed: {calc_rows[3]!r}")
         print("Calc preserves literal runs; the explicit whitespace option must retain these spaces.")
         for index, workbook in enumerate((source, ods)):
             for raw, preserve in product((False, True), repeat=2):
                 destination = temporary / f"export-{index}-{raw}-{preserve}"
                 subprocess.run([str(binary), *(["--raw"] if raw else []), *(["--preserve-whitespace"] if preserve else []), "-o", str(destination), str(workbook)], check=True, timeout=60)
                 manifest = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))
-                assert manifest["options"]["preserve_whitespace"] == preserve
-                assert [sheet["name"] for sheet in manifest["sheets"]] == ["Zeta", "Alpha"]
+                require(manifest["options"]["preserve_whitespace"] == preserve, 'Whitespace setting differs')
+                require([sheet["name"] for sheet in manifest["sheets"]] == ["Zeta", "Alpha"], 'Sheet names or workbook order differ')
                 with (destination / manifest["sheets"][0]["file"]).open(encoding="utf-8", newline="") as stream:
                     actual = list(csv.reader(stream, delimiter="\t"))
-                assert actual == (saved_expected if workbook == ods and not preserve else expected), f"{workbook.suffix}, raw={raw}, preserve={preserve}: {actual!r}"
-                assert manifest["sheets"][0]["merged_ranges"] == [{"start_row": 1, "start_column": 1, "end_row": 1, "end_column": 2}]
-                assert all(not sheet["warnings"] for sheet in manifest["sheets"])
-                assert manifest["sheets"][1]["rows"] == 0
-                assert manifest["sheets"][1]["columns"] == 0
+                require(actual == (saved_expected if workbook == ods and not preserve else expected), f"{workbook.suffix}, raw={raw}, preserve={preserve}: {actual!r}")
+                require(manifest["sheets"][0]["merged_ranges"] == [{"start_row": 1, "start_column": 1, "end_row": 1, "end_column": 2}], 'Original merged geometry differs')
+                require(all(not sheet["warnings"] for sheet in manifest["sheets"]), 'Unexpected warning metadata')
+                require(manifest["sheets"][1]["rows"] == 0, 'Exported row count differs')
+                require(manifest["sheets"][1]["columns"] == 0, 'Exported column count differs')
                 calc_import(soffice, "-env:UserInstallation=" + (temporary / "import-profile").as_uri(),
                             destination / manifest["sheets"][0]["file"], actual,
                             temporary / f"import-{index}-{raw}-{preserve}")

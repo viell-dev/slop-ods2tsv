@@ -7,6 +7,7 @@ import subprocess
 import tomllib
 import zipfile
 from licenses import notices, runtime_files
+from release_metadata import channel, portable_guide
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -16,6 +17,7 @@ def main():
     parser.add_argument("--target", required=True, choices=["x86_64-pc-windows-msvc", "x86_64-unknown-linux-musl"])
     args = parser.parse_args()
     version = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))["package"]["version"]
+    channel(version)
     env = os.environ.copy()
     if args.target.endswith("msvc"):
         env["RUSTFLAGS"] = " ".join(filter(None, [env.get("RUSTFLAGS"), "-C target-feature=+crt-static"]))
@@ -33,7 +35,7 @@ def main():
     notice_path = dist / f"{args.target}-THIRD_PARTY_NOTICES.txt"
     notice_path.write_text(notices(args.target), encoding="utf-8", newline="\n")
     readme_path = dist / f"{args.target}-README.txt"
-    readme_path.write_text((ROOT / "docs/PORTABLE.txt").read_text(encoding="utf-8").replace("@VERSION@", version), encoding="utf-8", newline="\n")
+    readme_path.write_text(portable_guide((ROOT / "docs/PORTABLE.txt").read_text(encoding="utf-8"), version), encoding="utf-8", newline="\n")
     files = [(binary_name, binary), ("README.txt", readme_path), ("LICENSE", ROOT / "LICENSE"),
              ("THIRD_PARTY_NOTICES.txt", notice_path), *runtime_files(args.target)]
     with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED) as package:

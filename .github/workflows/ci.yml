@@ -36,11 +36,16 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
+      - run: cargo doc --locked --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
       - run: cargo bench --locked --no-run
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.13'
       - run: python -m pip install -r requirements-dev.txt
+      - run: python -m unittest discover -s scripts -p 'test_*.py'
+      - run: python -O -m unittest discover -s scripts -p 'test_*.py'
       - run: python scripts/check.py --binary ${{ matrix.binary }}
       - if: runner.os == 'Linux'
         run: |
@@ -72,7 +77,6 @@ jobs:
           python-version: '3.13'
       - run: cargo build --locked
       - run: python -m pip install -r requirements-dev.txt
-      - run: python scripts/test_release.py
       - run: python scripts/check.py --binary target/debug/ods2tsv
   interoperability:
     name: Interoperability

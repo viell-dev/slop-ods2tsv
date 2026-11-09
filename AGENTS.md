@@ -5,6 +5,10 @@ instructions consistent with the implementation. User-facing Markdown describes 
 installable release; identify unreleased behavior explicitly. No documentation site is required
 for the current CLI scope.
 
+Use the [documentation maintenance checklist](docs/MAINTENANCE.md) for affected surfaces, canonical
+facts, automated coverage and semantic review. Required script validation must remain active under
+Python optimization; use explicit errors rather than `assert` for runtime gates.
+
 Work through issues and pull requests on task branches from `main`. Use GitHub rebase merges for
 linear history. Do not bypass required checks or main-branch protection. Use the shared labels in
 `.github/labels.json`: one `Type:` and at most one `Status:` label per issue or PR. `Needs:` labels

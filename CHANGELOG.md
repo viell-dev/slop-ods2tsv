@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.1
+
+Harden release and verification checks so Python optimization cannot disable branch, commit, CI,
+tag, archive, checksum, license or runtime-import gates. Derive portable-guide status from the
+package version for stable and alpha/beta/RC builds. Remove a duplicate installed corpus run and
+report named verification scenarios. Check nested documentation and local section links.
+
+Lead the README with installation and first use, document stable/prerelease security support,
+Windows/Linux contributor setup, the Rust API boundary and result metadata, and a concrete
+documentation synchronization checklist. Reconcile repository labels with the documented catalog.
+Converter behavior, CLI options, dependencies, toolchain and manifest schema-1 meanings are
+unchanged. Existing human usability and performance evidence remains representative. Windows
+binaries remain unsigned and can be refused by device Application Control; this patch does not
+change that distribution limit. [Release verification](https://github.com/viell-dev/slop-ods2tsv/issues/56)
+and [review findings](https://github.com/viell-dev/slop-ods2tsv/issues/45).
+
 ## 0.1.0
 
 First stable release for the agreed Windows/Linux portable CLI. Promote the verified RC.1 with

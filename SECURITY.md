@@ -5,7 +5,18 @@ Report vulnerabilities privately through
 version, platform, minimal synthetic reproducer and impact. Do not publish private workbooks,
 credentials or exploit details in ordinary issues.
 
-Fixes target the newest prerelease; older prereleases are not separately maintained. The tool reads
+## Supported versions
+
+Security fixes target the newest stable release line (currently `0.1.x`); install its newest
+published patch. Older stable lines and superseded patches are not maintained separately.
+During active development of the next version, its newest alpha, beta or RC also receives relevant
+fixes. A prerelease does not replace stable support, and older prereleases are not maintained.
+See [releases](https://github.com/viell-dev/slop-ods2tsv/releases) for published versions. This is
+the portable Windows/Linux CLI policy, without a long-term support channel.
+
+## Input and execution limits
+
+The tool reads
 local ZIP/XML and creates a new export. It does not execute macros, calculate formulas, follow external
 resources or decrypt content. Resource limits are not a promise that arbitrary hostile data is cheap.
 The [fixed caps](README.md#scope-and-limits) include 256 open XML elements and 256 MiB of
