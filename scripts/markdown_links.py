@@ -1,7 +1,6 @@
 """Check local inline/reference links and GitHub-style headings in maintained Markdown."""
 from html import unescape
 from html.parser import HTMLParser
-from pathlib import Path
 import re
 import unicodedata
 from urllib.parse import unquote, urlsplit
@@ -10,7 +9,7 @@ from validation import require
 
 
 EXCLUDED = {"artifacts", "target", "dist", "results", ".git", ".venv"}
-DESTINATION = r'(<[^>\n]+>|[^\s)]+)(?:\s+"[^"\n]*")?'
+DESTINATION = r'''(<[^>\n]+>|[^\s)]+)(?:\s+(?:"[^"\n]*"|'[^'\n]*'|\([^()\n]*\)))?'''
 
 
 def markdown_files(root):
@@ -77,7 +76,8 @@ def heading_anchors(text):
 
 
 def local_links(text):
-    for match in re.finditer(r'!?\[[^]\n]*\]\(\s*' + DESTINATION + r'\s*\)', text):
+    # The closing bracket is sufficient: link text can wrap or contain brackets/images.
+    for match in re.finditer(r'\]\(\s*' + DESTINATION + r'\s*\)', text):
         yield match[1].strip("<>")
     # Checking every definition also covers shortcut and collapsed reference links.
     for match in re.finditer(r'^ {0,3}\[[^]\n]+\]:\s*' + DESTINATION, text, re.M):

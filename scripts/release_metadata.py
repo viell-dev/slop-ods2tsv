@@ -4,7 +4,6 @@ import re
 from validation import require
 
 
-
 def channel(version):
     number = r"(?:0|[1-9][0-9]*)"
     match = re.fullmatch(rf"{number}\.{number}\.{number}(?:-(alpha|beta|rc)\.{number})?", version)

@@ -21,15 +21,17 @@ assigned to the person who must act, using only one Needs label. Optional feedba
 Reporting a problem needs no build setup. To contribute code, clone this repository, use a task
 branch from `main` and run commands from its root. Install Git and
 [rustup](https://www.rust-lang.org/tools/install). The repository pins the compiler, rustfmt,
-Clippy and rust-analyzer in `rust-toolchain.toml`; `rustup toolchain install` installs that selection.
+Clippy and rust-analyzer in `rust-toolchain.toml`; `rustup toolchain install` installs that
+selection.
 
 - Windows x86-64: install the MSVC C++ build tools and a Windows SDK using
   [Rustup's prerequisites](https://rust-lang.github.io/rustup/installation/windows-msvc.html).
   Use **Developer PowerShell for Visual Studio** targeting x64 when the linker, libraries or SDK
   are not exposed in an ordinary shell. This supplies the session's PATH/LIB/INCLUDE; do not change
   machine-wide paths to repair a single build session.
-- Linux: install the native C linker/build tools (Debian/Ubuntu: `sudo apt-get install build-essential`)
-  and use the default native Rust target. musl cross-target tools are only needed for release ZIPs.
+- Linux: install the native C linker/build tools (Debian/Ubuntu:
+  `sudo apt-get install build-essential`) and use the default native Rust target. musl cross-target
+  tools are only needed for release ZIPs.
 
 The following Cargo commands work on both platforms. Rust tests and the converter need no Python
 or LibreOffice installation.

@@ -119,7 +119,6 @@ def check_truncation(binary, directory, broken, content):
     require(not destination.exists(), 'Failed export left an output directory')
 
 
-
 def check_closed_stream(binary, directory, source, label, stream, expected_code, failed):
     # Closing the reader before launch makes the broken pipe deterministic on both OSes.
     read_fd, write_fd = os.pipe()

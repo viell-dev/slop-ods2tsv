@@ -18,6 +18,7 @@ import licenses
 from markdown_links import check_links, heading_anchors
 import package
 from release_metadata import portable_guide
+from validation import ValidationError
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -43,14 +44,14 @@ class MarkdownTest(unittest.TestCase):
         for target in ("absent.md", "docs/guide.md#absent", "#absent"):
             with self.subTest(target=target):
                 (self.root / "README.md").write_text(f"# Start\n[Broken]({target})\n", encoding="utf-8")
-                with self.assertRaisesRegex(ValueError, "README.md") as error:
+                with self.assertRaisesRegex(ValidationError, "README.md") as error:
                     check_links(self.root)
                 self.assertIn(target, str(error.exception))
 
     def test_nested_research_is_checked_but_generated_results_are_excluded(self):
         nested = self.root / "research/nested/README.md"
         nested.write_text("[Broken](absent.md)\n", encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "nested.*README.md.*absent.md"):
+        with self.assertRaisesRegex(ValidationError, "nested.*README.md.*absent.md"):
             check_links(self.root)
         nested.write_text("# Research\n", encoding="utf-8")
         (self.root / "research/results").mkdir()
@@ -60,6 +61,29 @@ class MarkdownTest(unittest.TestCase):
     def test_duplicate_and_setext_heading_ids(self):
         self.assertEqual(heading_anchors("A *heading*\n===\n## A heading\n## A heading-1\n## A heading\n"),
                          {"a-heading", "a-heading-1", "a-heading-1-1", "a-heading-2"})
+
+    def test_wrapped_nested_and_titled_links_keep_their_destination_checks(self):
+        shapes = (
+            "[Wrapped\ntext]({target})",
+            "[![Nested image](docs/guide.md)]({target})",
+            "[Text with [brackets]]({target})",
+            "[Title]({target} 'Single-quoted title')",
+            '[Title]({target} "Double-quoted title")',
+            "[Title]({target} (Parenthesized title))",
+        )
+        for shape in shapes:
+            valid = shape.format(target="docs/guide.md#repeat")
+            (self.root / "README.md").write_text(valid, encoding="utf-8")
+            with self.subTest(shape=shape, valid=True):
+                check_links(self.root)
+            for target, reason in (("absent.md", "missing file"),
+                                   ("docs/guide.md#absent", "missing section")):
+                (self.root / "README.md").write_text(shape.format(target=target), encoding="utf-8")
+                with self.subTest(shape=shape, target=target):
+                    with self.assertRaisesRegex(ValidationError, reason) as error:
+                        check_links(self.root)
+                    self.assertIn("README.md", str(error.exception))
+                    self.assertIn(target, str(error.exception))
 
 
 class PackageTest(unittest.TestCase):
@@ -116,13 +140,13 @@ class PackageTest(unittest.TestCase):
         with zipfile.ZipFile(archive) as source:
             members = {entry.filename: source.read(entry) for entry in source.infolist()}
         mutations = (
-            ("README.txt", members["README.txt"].replace(b"Stable release", b"Experimental alpha prerelease")),
-            ("licenses/rust/licenses/MIT.txt", None),
-            ("licenses/rust/licenses/MIT.txt", b""),
-            ("LICENSE", b"Incomplete license"),
-            ("unexpected.txt", b"Unrelated payload"),
+            ("README.txt", members["README.txt"].replace(b"Stable release", b"Experimental alpha prerelease"), "Portable guide differs"),
+            ("licenses/rust/licenses/MIT.txt", None, "Missing dependency/runtime license inventory"),
+            ("licenses/rust/licenses/MIT.txt", b"", "Empty Rust runtime notice"),
+            ("LICENSE", b"Incomplete license", "Application MIT license header"),
+            ("unexpected.txt", b"Unrelated payload", "unrelated repository files"),
         )
-        for member, content in mutations:
+        for member, content, diagnostic in mutations:
             with self.subTest(member=member, content=content), io.BytesIO() as buffer:
                 changed = dict(members)
                 if content is None:
@@ -133,22 +157,25 @@ class PackageTest(unittest.TestCase):
                     for key, value in changed.items():
                         output.writestr(key, value)
                 with patch.object(artifact, "ROOT", self.root), zipfile.ZipFile(buffer) as candidate:
-                    with self.assertRaises(ValueError):
+                    with self.assertRaisesRegex(ValidationError, diagnostic):
                         artifact.verify_contents(candidate, name, self.version)
 
     def test_mismatching_template_and_unknown_versions_fail(self):
         template = (self.root / "docs/PORTABLE.txt").read_text(encoding="utf-8")
-        for invalid in (template.replace("@RELEASE_STATUS@", "Stable release"), template + " @UNKNOWN@"):
-            with self.assertRaises(ValueError):
+        for invalid, diagnostic in (
+            (template.replace("@RELEASE_STATUS@", "Stable release"), "one version-derived release status"),
+            (template + " @UNKNOWN@", "Unresolved portable guide placeholder"),
+        ):
+            with self.assertRaisesRegex(ValidationError, diagnostic):
                 portable_guide(invalid, "0.1.2-alpha.1")
-        with self.assertRaisesRegex(ValueError, "Unsupported release version"):
+        with self.assertRaisesRegex(ValidationError, "Unsupported release version"):
             portable_guide(template, "0.1.2-dev.1")
 
     def test_checksum_rejection_precedes_any_binary_launch(self):
         archive, _ = self.build_fixture()
         archive.with_suffix(".zip.sha256").write_text("0" * 64 + "  wrong.zip\n", newline="\n", encoding="utf-8")
         with patch.object(artifact.subprocess, "run") as launch, patch("sys.argv", ["artifact.py", str(archive)]):
-            with self.assertRaisesRegex(ValueError, "checksum"):
+            with self.assertRaisesRegex(ValidationError, "checksum"):
                 artifact.main()
             launch.assert_not_called()
 
@@ -183,11 +210,12 @@ class RuntimeGateTest(unittest.TestCase):
         self.assertIn("saved/raw case", " ".join(error.exception.__notes__))
 
     def test_elf_interpreter_and_shared_dependencies_are_rejected(self):
-        for outputs in (("INTERP", ""), ("", "NEEDED")):
+        for outputs, diagnostic in ((("INTERP", ""), "dynamic ELF interpreter"),
+                                    (("", "NEEDED"), "shared-library requirements")):
             with self.subTest(outputs=outputs), patch.object(dependencies, "os", SimpleNamespace(name="posix")), \
                  patch.object(dependencies.subprocess, "check_output", side_effect=outputs), \
                  patch("sys.argv", ["dependencies.py", "synthetic-binary"]):
-                with self.assertRaises(ValueError):
+                with self.assertRaisesRegex(ValidationError, diagnostic):
                     dependencies.main()
 
     def test_windows_unreviewed_or_missing_imports_never_launch_binary(self):
@@ -198,11 +226,12 @@ class RuntimeGateTest(unittest.TestCase):
             dumpbin.touch()
             fake_os = SimpleNamespace(name="nt", environ={"ProgramFiles(x86)": str(root)})
             for imports in ("unreviewed-runtime.dll\n", "no imports"):
+                diagnostic = "Unreviewed runtime dependencies" if ".dll" in imports else "no import table found"
                 with self.subTest(imports=imports), patch.object(dependencies, "os", fake_os), \
                      patch.object(dependencies.subprocess, "check_output", side_effect=[str(root), imports]), \
                      patch.object(dependencies.subprocess, "run") as launch, \
                      patch("sys.argv", ["dependencies.py", "synthetic.exe"]):
-                    with self.assertRaises(ValueError):
+                    with self.assertRaisesRegex(ValidationError, diagnostic):
                         dependencies.main()
                     launch.assert_not_called()
 
@@ -211,29 +240,36 @@ class RuntimeGateTest(unittest.TestCase):
             root = Path(directory)
             (root / "rust-toolchain.toml").write_text('[toolchain]\nchannel = "1.99.1"\n', encoding="utf-8")
             for compiler in ("rustc 0.0.0 (synthetic)", "rustc 1.99.1 (synthetic)"):
+                diagnostic = "Unexpected compiler" if "0.0.0" in compiler else "copyright inventory is required"
                 with self.subTest(compiler=compiler), patch.object(licenses, "ROOT", root), \
                      patch.object(licenses.subprocess, "check_output", side_effect=[compiler, str(root)]):
-                    with self.assertRaises(ValueError):
+                    with self.assertRaisesRegex(ValidationError, diagnostic):
                         licenses.runtime_files("x86_64-pc-windows-msvc")
 
     def test_license_expression_missing_text_and_escape_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory) / "dependency"
             base.mkdir()
+            license_file = base / "LICENSE.txt"
+            license_file.write_text("Synthetic license text", encoding="utf-8")
             data = {"packages": [{"id": "root"}, {"id": "dep", "name": "synthetic", "version": "1.0",
                                                  "license": "Proprietary", "manifest_path": str(base / "Cargo.toml")}],
                     "resolve": {"root": "root", "nodes": [
                         {"id": "root", "deps": [{"pkg": "dep", "dep_kinds": [{"kind": None}]}]},
                         {"id": "dep", "deps": []}]}}
-            for case in ("expression", "missing", "escape"):
+            for case, diagnostic in (("expression", "Dependency license needs review"),
+                                     ("missing", "No license text found"),
+                                     ("escape", "License path escapes package")):
                 if case != "expression":
                     data["packages"][1]["license"] = "MIT"
+                if case == "missing":
+                    license_file.unlink()
                 if case == "escape":
                     outside = Path(directory) / "outside.txt"
                     outside.write_text("Synthetic", encoding="utf-8")
                     data["packages"][1]["license_file"] = str(outside)
                 with self.subTest(case=case), patch.object(licenses.subprocess, "check_output", return_value=json.dumps(data)):
-                    with self.assertRaises(ValueError):
+                    with self.assertRaisesRegex(ValidationError, diagnostic):
                         licenses.notices("x86_64-pc-windows-msvc")
 
 
