@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import zipfile
+
 from validation import ValidationError
 
 SPEC = importlib.util.spec_from_file_location("release", Path(__file__).with_name("release.py"))

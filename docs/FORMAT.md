@@ -1,6 +1,6 @@
 # Export format
 
-This describes the `0.1.1` source and manifest schema 1; GitHub releases determine which
+This describes the `0.1.2` source and manifest schema 1; GitHub releases determine which
 builds are published. CLI help is reproduced in the [README](../README.md#command-reference).
 
 ## TSV values and coordinates
