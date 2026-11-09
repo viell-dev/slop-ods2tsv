@@ -7,8 +7,8 @@ from pathlib import Path
 import re
 import subprocess
 import tomllib
-from release_metadata import channel
 
+from release_metadata import channel
 from validation import require
 
 ROOT = Path(__file__).resolve().parent.parent

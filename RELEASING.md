@@ -80,12 +80,13 @@ The [publisher](https://github.com/viell-dev/slop-ods2tsv/issues/38) marks alpha
 prereleases and never Latest. Stable versions use the normal release channel and GitHub's automatic
 Latest selection. Notes identify the correct channel. All branch/commit/CI/tag/archive/checksum
 gates apply to either path; `python -m unittest discover -s scripts -p 'test_*.py'` and the same
-command with `python -O` check both paths and failure cases
-without real Git/GitHub calls. A dry run writes eligibility output without publishing or notes.
+command with `python -O` check both paths and failure cases without real Git/GitHub calls. A dry
+run writes eligibility output without publishing or notes.
 
-Before the first stable promotion, record comparison with the chosen RC: converter source, dependencies,
-toolchain and packaging scripts must be unchanged. Version/documentation metadata can identify the
-final release; rebuild and verify those actual downloads rather than claiming RC byte identity.
+Before the first stable promotion, record comparison with the chosen RC: converter source,
+dependencies, toolchain and packaging scripts must be unchanged. Version/documentation metadata
+can identify the final release; rebuild and verify those actual downloads rather than claiming RC
+byte identity.
 Material changes need another RC. Record the agreed goal, representative human evidence and any
 remaining finding dispositions in the stable preparation PR before dispatching publication.
 Later routine patches can reuse representative human evidence with a recorded assessment; a new

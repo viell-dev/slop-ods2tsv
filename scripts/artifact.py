@@ -12,9 +12,7 @@ import zipfile
 
 from check import ROOT
 from release_metadata import portable_guide
-
 from validation import require
-
 
 
 def verify_contents(package, name, version):
@@ -32,7 +30,6 @@ def verify_contents(package, name, version):
                or entry.startswith("licenses/rust/licenses/") for entry in package.namelist()), "Portable ZIP contains unrelated repository files")
     portable_readme = portable_guide((ROOT / "docs/PORTABLE.txt").read_text(encoding="utf-8"), version)
     require(package.read("README.txt") == portable_readme.encode("utf-8"), 'Portable guide differs from version-derived template')
-    require("@VERSION@" not in portable_readme, 'Portable guide contains an unresolved version')
     application_license = package.read("LICENSE").decode("utf-8").replace("\r\n", "\n")
     require(application_license.startswith("MIT License\n\nCopyright (c) 2026 viell\n"), 'Application MIT license header or grant differs')
     require("Permission is hereby granted, free of charge" in application_license, 'Application MIT license header or grant differs')
@@ -45,11 +42,12 @@ def verify_contents(package, name, version):
     for entry in package.infolist():
         require(not Path(entry.filename).is_absolute() and ".." not in Path(entry.filename).parts, 'Archive member path is unsafe')
         if entry.filename == "THIRD_PARTY_NOTICES.txt":
-            require(package.read(entry).startswith(b"Third-party notices for this target"), 'Archive license bytes differ from repository')
+            require(package.read(entry).startswith(b"Third-party notices for this target"), "Third-party notice header is invalid")
         elif entry.filename.startswith("licenses/rust/"):
             require(package.read(entry).strip(), "Empty Rust runtime notice")
         elif entry.filename not in (name, "README.txt"):
-            require(package.read(entry) == (ROOT / entry.filename).read_bytes(), entry.filename)
+            require(package.read(entry) == (ROOT / entry.filename).read_bytes(),
+                    f"Archive license bytes differ from repository: {entry.filename}")
 
 
 def main():

@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import zipfile
+from validation import ValidationError
 
 SPEC = importlib.util.spec_from_file_location("release", Path(__file__).with_name("release.py"))
 release = importlib.util.module_from_spec(SPEC)
@@ -104,14 +105,15 @@ class ReleaseTest(unittest.TestCase):
         self.fixture("0.1.0-rc.1")
         for version in ("v0.1.0", "0.1", "0.1.0-dev.1", "01.0.0", "0.1.0-rc.01", "0.1.0+build"):
             (self.root / "Cargo.toml").write_text(f'[package]\nversion = "{version}"\n', encoding="utf-8")
-            with self.subTest(version=version), self.assertRaisesRegex(ValueError, "Unsupported release version"):
+            with self.subTest(version=version), self.assertRaisesRegex(ValidationError, "Unsupported release version"):
                 self.invoke()
             self.assertFalse(self.calls)
 
     def test_wrong_branch_or_commit_cannot_publish(self):
         self.fixture("0.1.0-rc.1")
-        for arguments in ({"ref": "refs/heads/topic"}, {"environment_sha": "b" * 40}):
-            with self.subTest(arguments=arguments), self.assertRaises(ValueError):
+        for arguments, diagnostic in (({"ref": "refs/heads/topic"}, "Release must run from main"),
+                                      ({"environment_sha": "b" * 40}, "commit differs from GITHUB_SHA")):
+            with self.subTest(arguments=arguments), self.assertRaisesRegex(ValidationError, diagnostic):
                 self.invoke(**arguments)
             self.assertFalse(self.calls)
 
@@ -121,14 +123,14 @@ class ReleaseTest(unittest.TestCase):
                      [{"name": "CI", "head_sha": SHA, "conclusion": "failure"}],
                      [{"name": "Other", "head_sha": SHA, "conclusion": "success"}]):
             self.ci_runs = runs
-            with self.subTest(runs=runs), self.assertRaisesRegex(ValueError, "Exact main commit"):
+            with self.subTest(runs=runs), self.assertRaisesRegex(ValidationError, "Exact main commit"):
                 self.invoke()
             self.assertFalse(self.calls)
 
     def test_existing_tag_cannot_be_replaced(self):
         self.fixture("0.1.0-rc.1")
         self.existing_tag = True
-        with self.assertRaisesRegex(ValueError, "Tag already exists"):
+        with self.assertRaisesRegex(ValidationError, "Tag already exists"):
             self.invoke()
         self.assertFalse(self.calls)
 
@@ -137,12 +139,12 @@ class ReleaseTest(unittest.TestCase):
         first, *_ = (self.root / "dist").glob("*.zip")
         original = first.read_bytes()
         first.unlink()
-        with self.subTest(case="missing"), self.assertRaisesRegex(ValueError, "Missing or unexpected"):
+        with self.subTest(case="missing"), self.assertRaisesRegex(ValidationError, "Missing or unexpected"):
             self.invoke()
         self.assertFalse(self.calls)
         first.write_bytes(original)
         first.with_name("unexpected.zip").write_bytes(original)
-        with self.subTest(case="unexpected"), self.assertRaisesRegex(ValueError, "Missing or unexpected"):
+        with self.subTest(case="unexpected"), self.assertRaisesRegex(ValidationError, "Missing or unexpected"):
             self.invoke()
         self.assertFalse(self.calls)
 
@@ -152,14 +154,14 @@ class ReleaseTest(unittest.TestCase):
         original = first.read_text(encoding="utf-8")
         for content in ("0" * 64 + original[64:], original.replace("ods2tsv-", "other-")):
             first.write_text(content, encoding="utf-8")
-            with self.subTest(content=content), self.assertRaises(ValueError):
+            with self.subTest(content=content), self.assertRaisesRegex(ValidationError, "checksum or sidecar filename differs"):
                 self.invoke()
             self.assertFalse(self.calls)
 
     def test_missing_release_notes_cannot_publish(self):
         self.fixture("0.1.0-rc.1")
         (self.root / "CHANGELOG.md").write_text("# No entry\n", encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "No changelog entry"):
+        with self.assertRaisesRegex(ValidationError, "No changelog entry"):
             self.invoke()
         self.assertFalse(self.calls)
 

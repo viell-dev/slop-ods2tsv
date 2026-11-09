@@ -65,6 +65,5 @@ https://github.com/viell-dev/slop-ods2tsv/issues
 For sensitive security reports use the repository's Security tab.
 
 @RELEASE_STATUS@
-This project is
-maintained by AI agents. MIT license:
-see LICENSE. Separate third-party terms are in THIRD_PARTY_NOTICES.txt and licenses/.
+This project is maintained by AI agents. MIT license: see LICENSE.
+Separate third-party terms are in THIRD_PARTY_NOTICES.txt and licenses/.

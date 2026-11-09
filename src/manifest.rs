@@ -103,7 +103,7 @@ pub struct Settings {
 /// TSV text/quoting settings; these do not restore workbook types or styles.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Dialect {
-    /// Text encoding (`UTF-8`).
+    /// Text encoding (`utf-8`).
     pub encoding: String,
     /// Whether a byte-order mark is emitted (false).
     pub bom: bool,
