@@ -301,6 +301,31 @@ class RuntimeGateTest(unittest.TestCase):
                     with self.assertRaisesRegex(ValidationError, diagnostic):
                         licenses.runtime_files("x86_64-pc-windows-msvc")
 
+    def test_reviewed_alternative_licenses_preserve_all_texts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            texts = {"LICENSE-CC0": "Synthetic CC0 text: café\n",
+                     "LICENSE-MIT0": "Synthetic MIT-0 text\n",
+                     "LICENSE-APACHE": "Synthetic Apache-2.0 text\n"}
+            for name, text in texts.items():
+                (base / name).write_text(text, encoding="utf-8")
+            expression = "CC0-1.0 OR MIT-0 OR Apache-2.0"
+            dependency = {"id": "dep", "name": "synthetic", "version": "1.0",
+                          "license": expression, "manifest_path": str(base / "Cargo.toml")}
+            data = {"packages": [{"id": "root"}, dependency],
+                    "resolve": {"root": "root", "nodes": [
+                        {"id": "root", "deps": [{"pkg": "dep", "dep_kinds": [{"kind": None}]}]},
+                        {"id": "dep", "deps": []}]}}
+            with patch.object(licenses.subprocess, "check_output", return_value=json.dumps(data)):
+                result = licenses.notices("x86_64-pc-windows-msvc")
+            self.assertIn(f"Declared license: {expression}\n", result)
+            for name, text in texts.items():
+                self.assertIn(f"--- {name} ---\n{text}", result)
+            dependency["license"] += " OR Proprietary"
+            with patch.object(licenses.subprocess, "check_output", return_value=json.dumps(data)):
+                with self.assertRaisesRegex(ValidationError, "Dependency license needs review"):
+                    licenses.notices("x86_64-pc-windows-msvc")
+
     def test_license_expression_missing_text_and_escape_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory) / "dependency"
