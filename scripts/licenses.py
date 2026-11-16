@@ -9,7 +9,8 @@ import tomllib
 from validation import require
 
 ROOT = Path(__file__).resolve().parent.parent
-ALLOWED = {"MIT", "Apache-2.0", "Unicode-3.0", "Unlicense", "BSD-3-Clause", "BSD-2-Clause", "0BSD", "ISC", "Zlib", "BSL-1.0"}
+# CC0-1.0 and MIT-0 were reviewed for constant_time_eq; retain every supplied license text.
+ALLOWED = {"MIT", "MIT-0", "Apache-2.0", "CC0-1.0", "Unicode-3.0", "Unlicense", "BSD-3-Clause", "BSD-2-Clause", "0BSD", "ISC", "Zlib", "BSL-1.0"}
 
 
 def notices(target):
