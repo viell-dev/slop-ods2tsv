@@ -28,9 +28,11 @@ and clarify that installed guides retain their release's text.
 exercise network-free channel, publication/failure, archive/license/import and link controls.
 `check.py --binary <executable>` has separate metadata, corpus and Markdown functions. It checks
 actual version/help, generated manifests against the schema, named extraction/recovery/stream
-scenarios and maintained local Markdown links. `artifact.py` invokes that corpus once for a freshly
-installed target archive, then checks imports and the shipped text example. Linux's Alpine and
-Calc checks remain distinct environments and behaviors.
+scenarios and maintained local Markdown links. Its default-destination scenario sets a fixed
+non-UTC `TZ` rule and checks the directory's local time and the manifest's UTC `exported_at`; the
+schema validator does not check `date-time` or `uri` formats itself. `artifact.py` invokes that
+corpus once for a freshly installed target archive, then checks imports and the shipped text
+example. Linux's Alpine and Calc checks remain distinct environments and behaviors.
 
 These checks do not prove arbitrary prose correct. Review TSV encoding/separators/record endings,
 value fallbacks, whitespace examples, exit codes, support/channel claims, recovery instructions and

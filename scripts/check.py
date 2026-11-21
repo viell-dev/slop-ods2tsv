@@ -1,6 +1,7 @@
 """Check the actual executable, manifest schema, documented help, and Markdown file/section links."""
 import argparse
 import csv
+import datetime as dt
 import json
 import os
 from pathlib import Path
@@ -36,6 +37,12 @@ WHITESPACE_WORKBOOK = (
     '<table:table-cell office:value-type="string" office:string-value="attribute">'
     '<text:p>  shown </text:p></table:table-cell></table:table-row></table:table>'
 )
+# A POSIX TZ rule five hours 45 minutes east of UTC, without daylight saving time. It differs from
+# UTC and from runner or developer zones, so local and UTC times cannot be confused unnoticed.
+EXPORT_TZ = "<+0545>-05:45"
+EXPORT_ZONE = dt.timezone(dt.timedelta(hours=5, minutes=45))
+# Covers whole-second names and coarse process clocks; far smaller than the zone offset.
+CLOCK_TOLERANCE = dt.timedelta(seconds=1)
 
 
 def run_scenario(label, function, *args):
@@ -51,6 +58,8 @@ def run_scenario(label, function, *args):
 def schema_validator():
     schema = json.loads((ROOT / "manifest.schema.json").read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
+    # Without optional packages, jsonschema skips the schema's uri and date-time formats. Explicit
+    # checks cover them: check_values compares $schema and check_default_destination exported_at.
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     return schema, validator
 
@@ -99,6 +108,28 @@ def check_existing_destination(command, destination, manifest):
     rerun = subprocess.run(command, capture_output=True, timeout=30)
     require(rerun.returncode == 1, 'Existing destination was not rejected')
     require(json.loads((destination / "manifest.json").read_text(encoding="utf-8")) == manifest, 'Rejected rerun changed the existing export')
+
+
+def check_default_destination(binary, directory, source):
+    working = directory / "default destination"
+    working.mkdir()
+    started = dt.datetime.now(dt.UTC)
+    process = subprocess.run([str(binary), str(source)], cwd=working, env=dict(os.environ, TZ=EXPORT_TZ),
+                             capture_output=True, text=True, check=True, timeout=30)
+    finished = dt.datetime.now(dt.UTC)
+    entries = list(working.iterdir())
+    require(len(entries) == 1, 'Default export must create exactly one directory')
+    destination = entries[0]
+    require(process.stdout == f'Exported 2 sheets into "{destination.name}".\n', 'Unexpected default-destination completion message')
+    match = re.fullmatch(re.escape(source.stem) + r" - (\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})", destination.name)
+    require(match, 'Default destination name differs from "<stem> - YYYY-MM-DDTHH-MM-SS"')
+    named = dt.datetime.strptime(match[1], "%Y-%m-%dT%H-%M-%S").replace(tzinfo=EXPORT_ZONE)
+    require(started - CLOCK_TOLERANCE <= named <= finished + CLOCK_TOLERANCE, 'Default destination does not name the local export time')
+    exported_at = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))["exported_at"]
+    require(re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z", exported_at), 'Manifest export time is not an RFC 3339 UTC timestamp')
+    exported = dt.datetime.strptime(exported_at[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=dt.UTC)
+    require(started - CLOCK_TOLERANCE <= exported <= finished + CLOCK_TOLERANCE, 'Manifest export time is not the UTC export time')
+    require(not (destination / ".incomplete").exists(), 'Completed export still has an incomplete marker')
 
 
 def check_whitespace(binary, directory, source, validator, raw):
@@ -150,6 +181,7 @@ def corpus(binary, directory):
     for raw in (False, True):
         manifest = run_scenario(f"values and metadata raw={raw}",
                                 check_values, binary, directory, source, schema, validator, raw)
+    run_scenario("default destination and local/UTC times", check_default_destination, binary, directory, source)
     whitespace = directory / "whitespace.fods"
     whitespace.write_text(HEADER + WHITESPACE_WORKBOOK + FOOTER, encoding="utf-8")
     for raw in (False, True):

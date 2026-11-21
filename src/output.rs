@@ -104,7 +104,7 @@ impl Run {
             let stem = safe_name(&input.file_stem().unwrap_or_default().to_string_lossy());
             let base = format!(
                 "{stem} - {}",
-                jiff::Zoned::now().strftime("%Y-%m-%dT%H-%M-%S")
+                jiff::ZonedDateTime::now().strftime("%Y-%m-%dT%H-%M-%S")
             );
             let mut claimed = None;
             for attempt in 1..=usize::MAX {

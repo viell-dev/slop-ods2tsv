@@ -1,6 +1,7 @@
 """Network-free controls for package, documentation, dependency and license gates."""
 import contextlib
 import csv
+import datetime as dt
 import io
 import json
 from pathlib import Path
@@ -351,6 +352,42 @@ class RuntimeGateTest(unittest.TestCase):
                 with self.subTest(case=case), patch.object(licenses.subprocess, "check_output", return_value=json.dumps(data)):
                     with self.assertRaisesRegex(ValidationError, diagnostic):
                         licenses.notices("x86_64-pc-windows-msvc")
+
+
+class DefaultDestinationTest(unittest.TestCase):
+    def synthetic_export(self, zone, name_format, stamp):
+        def run(command, cwd, env, **options):
+            self.assertEqual(env["TZ"], check.EXPORT_TZ)
+            now = dt.datetime.now(dt.UTC)
+            destination = Path(cwd) / f"{Path(command[1]).stem} - {now.astimezone(zone).strftime(name_format)}"
+            destination.mkdir()
+            (destination / "manifest.json").write_text(json.dumps({"exported_at": stamp(now)}), encoding="utf-8")
+            return SimpleNamespace(stdout=f'Exported 2 sheets into "{destination.name}".\n')
+        return run
+
+    def test_default_destination_names_local_time_and_manifest_records_utc(self):
+        local, named = check.EXPORT_ZONE, "%Y-%m-%dT%H-%M-%S"
+        def utc(now):
+            return now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        def offset(now):
+            return now.astimezone(local).isoformat()
+        def local_marked_utc(now):
+            return now.astimezone(local).strftime("%Y-%m-%dT%H:%M:%SZ")
+        for label, zone, name_format, stamp, diagnostic in (
+            ("local name and UTC manifest", local, named, utc, None),
+            ("UTC name", dt.UTC, named, utc, "does not name the local export time"),
+            ("other name format", local, "%Y%m%d-%H%M%S", utc, "name differs"),
+            ("offset manifest time", local, named, offset, "not an RFC 3339 UTC timestamp"),
+            ("local manifest time marked UTC", local, named, local_marked_utc, "not the UTC export time"),
+        ):
+            with self.subTest(label), tempfile.TemporaryDirectory() as directory, \
+                 patch.object(check.subprocess, "run", side_effect=self.synthetic_export(zone, name_format, stamp)):
+                source = Path(directory) / "synthetic workbook.ods"
+                if diagnostic is None:
+                    check.check_default_destination(Path("synthetic-binary"), Path(directory), source)
+                else:
+                    with self.assertRaisesRegex(ValidationError, diagnostic):
+                        check.check_default_destination(Path("synthetic-binary"), Path(directory), source)
 
 
 if __name__ == "__main__":
