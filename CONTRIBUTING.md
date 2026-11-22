@@ -98,7 +98,7 @@ outside timed work; conversion includes file/manifest output. Assert dimensions 
 compiler, target, host, fixture size and method. Retain reports and correctness controls. Compare
 timings on a controlled host; noisy shared-runner timings are not a hard speed gate.
 
-The archived [parallel-sheet investigation](research/parallel-sheets/README.md) records a bounded
+The archived [parallel-sheet investigation](docs/research/parallel-sheets/README.md) records a bounded
 Linux experiment, aggregate measurements, known prototype failures and a synthetic reproduction
 kit. Its frozen patch targets the recorded historical commit; it is separate from the supported
 exporter and the ordinary regression suite.
