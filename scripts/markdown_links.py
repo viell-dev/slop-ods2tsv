@@ -15,7 +15,7 @@ QUOTE_MARKER = r" {0,3}>[ \t]?"
 
 def markdown_files(root):
     paths = [*root.glob("*.md")]
-    for directory in ("docs", "licenses", "research", ".github"):
+    for directory in ("docs", "licenses", ".github"):
         paths.extend((root / directory).rglob("*.md"))
     return sorted(path for path in paths
                   if not EXCLUDED.intersection(path.relative_to(root).parts) and not path.is_symlink())

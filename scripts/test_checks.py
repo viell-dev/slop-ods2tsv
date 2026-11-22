@@ -32,7 +32,7 @@ class MarkdownTest(unittest.TestCase):
         (self.root / "README.md").write_text("# Start\n", encoding="utf-8")
         (self.root / "docs").mkdir()
         (self.root / "docs/guide.md").write_text('# Café: `value`\n## Repeat\n## Repeat\n<a id="custom"></a>\n', encoding="utf-8")
-        (self.root / "research/nested").mkdir(parents=True)
+        (self.root / "docs/research/nested").mkdir(parents=True)
 
     def assert_link_shapes_checked(self, shapes):
         for shape in shapes:
@@ -65,13 +65,13 @@ class MarkdownTest(unittest.TestCase):
                 self.assertIn(target, str(error.exception))
 
     def test_nested_research_is_checked_but_generated_results_are_excluded(self):
-        nested = self.root / "research/nested/README.md"
+        nested = self.root / "docs/research/nested/README.md"
         nested.write_text("[Broken](absent.md)\n", encoding="utf-8")
         with self.assertRaisesRegex(ValidationError, "nested.*README.md.*absent.md"):
             check_links(self.root)
         nested.write_text("# Research\n", encoding="utf-8")
-        (self.root / "research/results").mkdir()
-        (self.root / "research/results/generated.md").write_text("[Ignored](absent.md)", encoding="utf-8")
+        (self.root / "docs/research/results").mkdir()
+        (self.root / "docs/research/results/generated.md").write_text("[Ignored](absent.md)", encoding="utf-8")
         check_links(self.root)
 
     def test_duplicate_and_setext_heading_ids(self):

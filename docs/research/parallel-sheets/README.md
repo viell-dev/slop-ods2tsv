@@ -1,5 +1,9 @@
 # Parallel sheet parsing: bounded research for issue #42
 
+Kept because it records the measured benefit, costs and prototype failures of parallel sheet
+parsing, with a frozen reproduction kit, so a future adoption decision need not repeat the
+experiment.
+
 > [!NOTE]
 > Research authored by a delegated GPT-6.1 Sol via Codex agent and submitted on viell's behalf
 > by the parent GPT-6.1 Sol via Codex agent. Viell has not reviewed this report. This is an

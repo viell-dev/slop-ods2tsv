@@ -14,7 +14,7 @@ method, limitations and all results. They do not measure the Windows or released
 Use a new lab directory and Linux containers. From the repository root in PowerShell:
 
 ```powershell
-$kit = (Resolve-Path research/parallel-sheets).Path
+$kit = (Resolve-Path docs/research/parallel-sheets).Path
 $lab = Join-Path (Get-Location).Path artifacts/parallel-rerun
 New-Item -ItemType Directory -Path $lab -ErrorAction Stop
 git archive --format=tar --output "$lab/source-beta1.tar" e1807728d6e92b699cab0a859b29092da4946309

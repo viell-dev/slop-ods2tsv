@@ -40,8 +40,8 @@ the complete unfamiliar-user path from download through reporting. Required PR e
 reviewed revision and any platform, policy or manual-setup limits. Human usability evidence is
 separate from agent-run functional checks.
 
-The link inventory covers root Markdown and recursive `docs/`, `licenses/`, `research/` and
-`.github/` Markdown, excluding generated `results/`, artifacts, targets, distributions, virtual
+The link inventory covers root Markdown and recursive `docs/`, `licenses/` and `.github/`
+Markdown, excluding generated `results/`, artifacts, targets, distributions, virtual
 environments and symlink files. Inline links/images and reference definitions support local files,
 same/cross-file heading fragments, percent-encoded targets, ATX/setext headings, duplicate heading
 suffixes and explicit HTML `id`/anchor `name`. Destination checks are independent of link text or
