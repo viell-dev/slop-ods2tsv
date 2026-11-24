@@ -14,7 +14,8 @@ linear history. Do not bypass required checks or main-branch protection. Use the
 `.github/labels.json`: one `Type:` and at most one `Status:` label per issue or PR. `Needs:` labels
 are for a person who must act, with a self-contained request and that person's assignment.
 
-The prototypes are public references, not this repository's runtime or verification infrastructure.
+The frozen `prototype-*` branches are references, not this repository's runtime or verification
+infrastructure. Do not develop, merge or delete them; `prototype-rust-manual` is an unfinished rewrite.
 Keep all contributor and release procedures self-contained here. Preserve applicable licensing and
 provenance when adapting their tests or code. Use synthetic inputs rather than private workbooks.
 
