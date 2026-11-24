@@ -1,4 +1,4 @@
-"""Linux Docker experiment. Standard library only. No private input generation or publishing."""
+"""Linux Docker experiment. Standard library only."""
 import argparse
 import hashlib
 import json
@@ -15,7 +15,6 @@ LAB = Path('/lab')
 FIX = LAB / 'fixtures'
 WORK = LAB / 'work'
 RESULTS = LAB / 'results'
-PRIVATE = LAB / 'private'
 O = 'urn:oasis:names:tc:opendocument:xmlns:office:1.0'
 T = 'urn:oasis:names:tc:opendocument:xmlns:table:1.0'
 X = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0'
@@ -112,14 +111,13 @@ def fingerprint(out):
 
 COUNTER = 0
 RUN_ID = str(time.time_ns())
-def execute(case, mode, flags=(), private=False):
+def execute(case, mode, flags=()):
     global COUNTER
     COUNTER += 1
     WORK.mkdir(exist_ok=True)
-    PRIVATE.mkdir(exist_ok=True)
-    inp = Path('/private/input.ods') if private else FIX / (case + '.ods')
+    inp = FIX / (case + '.ods')
     out = WORK / f'out-{COUNTER}'
-    receipt_dir = PRIVATE if private else RESULTS / 'logs'
+    receipt_dir = RESULTS / 'logs'
     receipt_dir.mkdir(exist_ok=True)
     receipt = receipt_dir / f'{RUN_ID}-{case}-{COUNTER}-{mode}'
     env = dict(os.environ)
@@ -144,35 +142,33 @@ def execute(case, mode, flags=(), private=False):
         shutil.rmtree(out)
     return record, digest
 
-def append(name, item, private=False):
-    with ((PRIVATE if private else RESULTS) / name).open('a') as f:
+def append(name, item):
+    with (RESULTS / name).open('a') as f:
         f.write(json.dumps(item, sort_keys=True) + '\n')
 
 def timing(cases, repeats=3, start=0, warmup=True):
     for case in cases:
-        private = case == 'private-92'
         expected = None
         rotations = ([-1] if warmup else []) + list(range(start, start + repeats))
         for rotation in rotations:
             order = MODES[max(rotation, 0) % len(MODES):] + MODES[:max(rotation, 0) % len(MODES)]
             for mode in order:
-                record, digest = execute(case, mode, private=private)
+                record, digest = execute(case, mode)
                 if expected is None: expected = digest
                 record.update(rotation=rotation, warmup=rotation == -1, equal=bool(digest and digest == expected))
-                append('measurements.jsonl', record, private)
+                append('measurements.jsonl', record)
                 assert record['exit'] == 0 and record['equal'], (case, mode, record)
             print('TIMED', case, rotation, flush=True)
 
 def correctness(cases):
     for case in cases:
-        private = case == 'private-92'
         for flags in [(), ('--raw',), ('--preserve-whitespace',), ('--raw', '--preserve-whitespace')]:
-            reference, digest = execute(case, 'baseline', flags, private)
+            reference, digest = execute(case, 'baseline', flags)
             assert reference['exit'] == 0, reference
             for mode in ['1', '2', '4', '6', 'overlap']:
-                record, actual = execute(case, mode, flags, private)
+                record, actual = execute(case, mode, flags)
                 record['equal'] = digest == actual
-                append('correctness.jsonl', record, private)
+                append('correctness.jsonl', record)
                 assert record['exit'] == 0 and record['equal'], record
         print('CHECKED', case, flush=True)
 
@@ -188,17 +184,14 @@ def failures():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('stage', choices=['generate', 'timing', 'correctness', 'failures', 'private', 'all'])
+    parser.add_argument('stage', choices=['generate', 'timing', 'correctness', 'failures', 'all'])
     args = parser.parse_args()
-    for p in [FIX, WORK, RESULTS, PRIVATE]: p.mkdir(exist_ok=True)
+    for p in [FIX, WORK, RESULTS]: p.mkdir(exist_ok=True)
     cases = [f'dense-{n}' for n in [1, 2, 4, 8, 16, 100, 1000, 5000]] + ['skewed', 'empty-tail', 'output-heavy', 'merged']
     if args.stage in ['all', 'generate']: generate()
     if args.stage in ['all', 'timing']: timing(cases)
     if args.stage in ['all', 'correctness']: correctness(cases + ['semantics', 'namespaces', 'utf16le', 'utf16be', 'latin1', 'depth-exact', 'xml-exact'])
     if args.stage in ['all', 'failures']: failures()
-    if args.stage in ['all', 'private']:
-        timing(['private-92'])
-        correctness(['private-92'])
     print('STAGE_COMPLETE', args.stage, flush=True)
 
 if __name__ == '__main__': main()
