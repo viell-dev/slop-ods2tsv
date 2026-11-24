@@ -4,7 +4,7 @@ import statistics as s
 
 root = Path('/lab')
 rows = []
-for p in [root / 'results/measurements.jsonl', root / 'private/measurements.jsonl']:
+for p in [root / 'results/measurements.jsonl']:
     if p.exists(): rows.extend(json.loads(line) for line in p.read_text().splitlines())
 summary = []
 for case in dict.fromkeys(r['case'] for r in rows):

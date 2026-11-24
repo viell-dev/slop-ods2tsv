@@ -69,16 +69,3 @@ compatible. Inspect `results/probes.jsonl` and the report. To see the existing-s
 run `RESEARCH_MODE=4 cargo test --locked` from the lab's prototype tree in the build environment.
 It intentionally exits nonzero: four integration assertions fail and later targets do not run.
 This is retained adverse evidence, not an accepted production test result.
-
-## Private evidence boundary
-
-The public kit needs no private workbook. Published raw records cover generated synthetic
-fixtures only; `summary.json` also contains the authorized private case's aggregate statistics.
-The private workbook and its per-process/raw records are not included.
-
-An independently authorized private test can mount an external directory containing `input.ods`
-read-only at `/private` and explicitly invoke `python3 /kit/runner.py private`. Its logs/results
-are written to the lab's `private/` directory. Keep that directory and all derived data private.
-The direct runner's `all` stage also requests this optional input; the public synthetic wrapper
-deliberately exposes individual stages instead. Never put private data in the Docker build
-context or public fixtures. Publish aggregate statistics only with the owner's authorization.
