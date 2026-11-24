@@ -121,11 +121,11 @@ serial **0.868–0.900 s**. The median converter CPU cost there is **2.51 CPU-s*
 **0.88 CPU-s**. Extra CPU work is observed; its exact scheduling/filesystem cause was not isolated.
 The observations are retained as a prototype performance limit, not a production bug.
 
-Writer overlap helps the empty/tiny-file microcases, including 0.050 to 0.030 s for empty tails,
-but not the dense cases through 1,000 sheets or the output-heavy case. The output-heavy fixture expands compact repeats
-into 1.92 million fields: instrumentation measures approximately 0.110 s writing and 0.0003 s
-reading/parsing. Overlapping a negligible parser phase cannot materially improve that workload.
-The approximately 10-ms merged case is too small for strong relative timing conclusions.
+Writer overlap helps the empty/tiny-file microcases, including 0.050 to 0.030 s for empty tails, but
+not the dense cases through 1,000 sheets or the output-heavy case. The output-heavy fixture expands
+compact repeats into 1.92 million fields: instrumentation measures approximately 0.110 s writing and
+0.0003 s reading/parsing. Overlapping a negligible parser phase cannot materially improve that
+workload. The approximately 10-ms merged case is too small for strong relative timing conclusions.
 
 ## Dense 100-sheet case: phases, CPU, memory and variation
 
