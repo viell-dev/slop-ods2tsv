@@ -182,9 +182,10 @@ author review and independent agent review provide engineering evidence. The agr
 [human usability reports](https://github.com/viell-dev/slop-ods2tsv/issues/22) are recorded separately.
 The README, `--help` and format guide cover this CLI; no documentation site is required.
 
-The separate [Python](https://github.com/viell-dev/ods_to_tsv.py) and
-[Rust](https://github.com/viell-dev/ods2tsv/tree/llm1) prototypes supplied behavioral references
-and regression cases; their histories are not imported. The replacement deliberately differs in
+The [Python](https://github.com/viell-dev/slop-ods2tsv/tree/prototype-python) and
+[Rust](https://github.com/viell-dev/slop-ods2tsv/tree/prototype-rust) prototypes supplied behavioral
+references and regression cases. They are kept as frozen branches whose histories are separate from
+`main`. The replacement deliberately differs in
 leading rows, whitespace, collision-safe naming, rectangularity and complete-document failure
 handling. This documented contract is the compatibility reference.
 
@@ -195,5 +196,5 @@ adapted material from their prototypes. Binary ZIPs also contain separate Cargo 
 [runtime notices](licenses/README.md); those third-party licenses continue to apply.
 
 Alpha.1–alpha.3 were published with GPL-3.0-only notices. The owner selected MIT for alpha.4 and
-subsequent releases; the earlier release tags and archives are preserved. The prototype repositories
+subsequent releases; the earlier release tags and archives are preserved. The prototype branches
 retain their own historical license files. [Decision and release evidence](https://github.com/viell-dev/slop-ods2tsv/issues/25).
